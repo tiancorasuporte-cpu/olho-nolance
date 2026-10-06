@@ -99,8 +99,7 @@ export function LivePage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [cameras.data]);
 
-  const cols =
-    filtered.length <= 1 ? "1fr" : filtered.length === 2 ? "1fr 1fr" : "repeat(auto-fit, minmax(320px, 1fr))";
+  const cols = filtered.length <= 1 ? "1fr" : "repeat(auto-fit, minmax(min(320px, 100%), 1fr))";
 
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
@@ -138,6 +137,7 @@ export function LivePage() {
             setFocusId(null);
           }}
           style={selectStyle}
+          className="m-full"
         >
           <option value="all">Todas as quadras</option>
           {(venues.data || []).map((v) => (

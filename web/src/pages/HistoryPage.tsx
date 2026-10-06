@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
 import { api, type Clip, type Venue } from "../lib/api";
 import { isPlayer, useAuth } from "../lib/auth";
@@ -135,13 +135,20 @@ export function HistoryPage() {
       ) : (
         <>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-            <SearchInput
-              value={clipQuery}
-              onChange={setClipQuery}
-              placeholder="Buscar lance (nº, câmera…)"
-              count={{ shown: visibleClips.length, total: clipList.length }}
-            />
-            <select value={cameraId} onChange={(e) => setCameraId(e.target.value)} style={selectStyle}>
+            <div className="m-full" style={{ flex: "1 1 260px", maxWidth: 480 }}>
+              <SearchInput
+                value={clipQuery}
+                onChange={setClipQuery}
+                placeholder="Buscar lance (nº, câmera…)"
+                count={{ shown: visibleClips.length, total: clipList.length }}
+              />
+            </div>
+            <select
+              value={cameraId}
+              onChange={(e) => setCameraId(e.target.value)}
+              style={selectStyle}
+              className="m-full"
+            >
               <option value="">Todas câmeras</option>
               {cameraOptions.map(([id, name]) => (
                 <option key={id} value={id}>
@@ -151,13 +158,13 @@ export function HistoryPage() {
             </select>
             {!player && (
               <>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} style={selectStyle}>
+                <select value={status} onChange={(e) => setStatus(e.target.value)} style={selectStyle} className="m-full">
                   <option value="">Status</option>
                   <option value="ready">pronto</option>
                   <option value="processing">processando</option>
                   <option value="failed">falhou</option>
                 </select>
-                <select value={source} onChange={(e) => setSource(e.target.value)} style={selectStyle}>
+                <select value={source} onChange={(e) => setSource(e.target.value)} style={selectStyle} className="m-full">
                   <option value="">Origem</option>
                   <option value="web">web</option>
                   <option value="button">botão</option>
@@ -165,13 +172,23 @@ export function HistoryPage() {
                 </select>
               </>
             )}
-            <label style={labelStyle}>
-              De
-              <input type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} style={selectStyle} />
+            <label style={labelStyle} className="m-full">
+              <span style={{ width: 28 }}>De</span>
+              <input
+                type="datetime-local"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                style={{ ...selectStyle, flex: 1, minWidth: 0 }}
+              />
             </label>
-            <label style={labelStyle}>
-              Até
-              <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} style={selectStyle} />
+            <label style={labelStyle} className="m-full">
+              <span style={{ width: 28 }}>Até</span>
+              <input
+                type="datetime-local"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                style={{ ...selectStyle, flex: 1, minWidth: 0 }}
+              />
             </label>
           </div>
 
@@ -183,7 +200,51 @@ export function HistoryPage() {
             />
           )}
 
-          <div style={{ overflowX: "auto", border: "1px solid var(--line)" }}>
+          <div className="only-mobile">
+            <div style={{ display: "grid", gap: 10 }}>
+              {visibleClips.map((c) => (
+                <div
+                  key={c.id}
+                  style={{
+                    display: "grid",
+                    gap: 10,
+                    padding: 14,
+                    border: preview?.id === c.id ? "1px solid var(--accent)" : "1px solid var(--line)",
+                    background: "rgba(0,0,0,0.3)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700 }}>
+                        Lance #{c.id} · {c.camera_name || `Câmera #${c.camera_id}`}
+                      </div>
+                      <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 2 }}>
+                        {c.venue_name || `Quadra #${c.venue_id}`} · {new Date(c.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    {!player && <StatusBadge status={c.status} />}
+                  </div>
+                  {!player && c.error_message && (
+                    <div style={{ color: "var(--danger)", fontSize: 12 }}>{c.error_message}</div>
+                  )}
+                  {c.status === "ready" ? (
+                    <ClipActions clip={c} onPreview={() => setPreview(c)} />
+                  ) : (
+                    c.status === "processing" && (
+                      <div style={{ color: "var(--warn)", fontSize: 13 }}>Gerando o vídeo…</div>
+                    )
+                  )}
+                </div>
+              ))}
+              {visibleClips.length === 0 && (
+                <div style={{ padding: 24, color: "var(--muted)", textAlign: "center", border: "1px dashed var(--line)" }}>
+                  {clips.isLoading ? "Carregando…" : "Nenhum lance encontrado."}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="only-desktop" style={{ overflowX: "auto", border: "1px solid var(--line)" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: "rgba(0,0,0,0.25)", textAlign: "left" }}>
@@ -224,14 +285,7 @@ export function HistoryPage() {
                     )}
                     <td style={cell}>
                       {c.status === "ready" ? (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button type="button" style={ghostBtn} onClick={() => setPreview(c)}>
-                            ▶ Assistir
-                          </button>
-                          <button type="button" style={primaryBtn} onClick={() => downloadClip(c.id)}>
-                            Baixar
-                          </button>
-                        </div>
+                        <ClipActions clip={c} onPreview={() => setPreview(c)} />
                       ) : (
                         "—"
                       )}
@@ -254,13 +308,37 @@ export function HistoryPage() {
   );
 }
 
+function ClipActions({ clip, onPreview }: { clip: Clip; onPreview: () => void }) {
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <button type="button" style={ghostBtn} onClick={onPreview}>
+        ▶ Assistir
+      </button>
+      <button type="button" style={primaryBtn} onClick={() => downloadClip(clip.id)}>
+        Baixar
+      </button>
+      {canShareFiles() && (
+        <button type="button" style={ghostBtn} onClick={() => shareClip(clip.id)}>
+          Compartilhar
+        </button>
+      )}
+    </div>
+  );
+}
+
 function PreviewPanel({ clip, venueLabel, onClose }: { clip: Clip; venueLabel: string; onClose: () => void }) {
   const [error, setError] = useState(false);
-  useEffect(() => setError(false), [clip.id]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setError(false);
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [clip.id]);
 
   return (
     <div
+      ref={panelRef}
       style={{
+        scrollMarginTop: 80,
         display: "grid",
         gap: 10,
         padding: 12,
@@ -276,10 +354,15 @@ function PreviewPanel({ clip, venueLabel, onClose }: { clip: Clip; venueLabel: s
             {new Date(clip.created_at).toLocaleString()}
           </span>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" style={primaryBtn} onClick={() => downloadClip(clip.id)}>
             Baixar
           </button>
+          {canShareFiles() && (
+            <button type="button" style={ghostBtn} onClick={() => shareClip(clip.id)}>
+              Compartilhar
+            </button>
+          )}
           <button type="button" style={ghostBtn} onClick={onClose}>
             Fechar
           </button>
@@ -304,15 +387,41 @@ function PreviewPanel({ clip, venueLabel, onClose }: { clip: Clip; venueLabel: s
   );
 }
 
-function downloadClip(id: number) {
+function fetchClipBlob(id: number): Promise<Blob> {
   const token = localStorage.getItem("token");
-  void fetch(api.clips.downloadUrl(id), {
+  return fetch(api.clips.downloadUrl(id), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-    .then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.blob();
-    })
+  }).then((r) => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.blob();
+  });
+}
+
+/** Web Share with files: only on HTTPS and supporting phones (Android Chrome, iOS Safari). */
+function canShareFiles(): boolean {
+  if (typeof navigator === "undefined" || !navigator.canShare) return false;
+  try {
+    return navigator.canShare({ files: [new File([], "lance.mp4", { type: "video/mp4" })] });
+  } catch {
+    return false;
+  }
+}
+
+function shareClip(id: number) {
+  void fetchClipBlob(id)
+    .then((blob) =>
+      navigator.share({
+        files: [new File([blob], `lance-${id}.mp4`, { type: "video/mp4" })],
+        title: `ONL Sports · Lance #${id}`,
+      }),
+    )
+    .catch((err: Error) => {
+      if (err.name !== "AbortError") window.alert(`Falha ao compartilhar: ${err.message}`);
+    });
+}
+
+function downloadClip(id: number) {
+  void fetchClipBlob(id)
     .then((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -379,7 +488,7 @@ const primaryBtn: React.CSSProperties = {
   background: "var(--accent)",
   color: "var(--bg)",
   border: "none",
-  padding: "6px 12px",
+  padding: "9px 14px",
   fontWeight: 700,
   cursor: "pointer",
 };
@@ -388,7 +497,7 @@ const ghostBtn: React.CSSProperties = {
   background: "transparent",
   color: "var(--accent)",
   border: "1px solid var(--accent)",
-  padding: "6px 12px",
+  padding: "9px 14px",
   fontWeight: 600,
   cursor: "pointer",
 };

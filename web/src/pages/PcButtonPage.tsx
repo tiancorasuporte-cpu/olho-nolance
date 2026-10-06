@@ -129,8 +129,7 @@ export function PcButtonPage() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [cameras.data]);
 
-  const cols =
-    filtered.length <= 1 ? "1fr" : filtered.length === 2 ? "1fr 1fr" : "repeat(auto-fit, minmax(300px, 1fr))";
+  const cols = filtered.length <= 1 ? "1fr" : "repeat(auto-fit, minmax(min(300px, 100%), 1fr))";
 
   return (
     <div className="fade-up" style={{ display: "grid", gap: 16, minHeight: "70vh" }}>

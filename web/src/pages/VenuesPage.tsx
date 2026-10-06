@@ -55,6 +55,7 @@ export function VenuesPage() {
             border: "1px solid var(--line)",
             background: "rgba(26,26,26,0.7)",
           }}
+          className="m-stack"
         >
           <input
             placeholder="Nome da quadra"

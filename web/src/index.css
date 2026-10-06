@@ -25,6 +25,10 @@ body,
   min-height: 100%;
 }
 
+html {
+  background-color: var(--bg);
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -82,4 +86,173 @@ textarea {
 
 .btn-lance {
   animation: pulse-glow 2.2s ease-in-out infinite;
+}
+
+/* ---------- Layout ---------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 10, 10, 0.82);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.app-nav-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.app-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-nav-link {
+  padding: 6px 12px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.app-nav-link.active {
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.menu-toggle {
+  display: none;
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+}
+
+.app-main {
+  flex: 1;
+  padding: 24px;
+  max-width: 1200px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+/* Page roots are grids: never let a wide child stretch the page */
+.app-main > .fade-up {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Desktop shows the clip table, phones get cards */
+.only-mobile {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .app-header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .app-nav-wrap {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 8px 0 4px;
+  }
+
+  .app-nav-wrap.open {
+    display: flex;
+  }
+
+  .app-nav {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .app-nav-link {
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid var(--line);
+  }
+
+  .app-user {
+    justify-content: space-between;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+
+  .app-main {
+    padding: 14px;
+  }
+
+  body {
+    background-attachment: scroll;
+  }
+
+  h1 {
+    font-size: 32px !important;
+  }
+
+  /* iOS zooms into inputs with font-size < 16px */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .m-stack,
+  .ads-form,
+  .ad-row,
+  .ads-layout,
+  .cam-form,
+  .dev-form,
+  .user-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .m-full {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 100% !important;
+  }
+
+  .only-mobile {
+    display: block;
+  }
+
+  .only-desktop {
+    display: none !important;
+  }
 }
