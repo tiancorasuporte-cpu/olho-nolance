@@ -1,0 +1,14 @@
+.env
+data/
+*.pyc
+__pycache__/
+.venv/
+node_modules/
+web/dist/
+*.mp4
+.DS_Store
+*.sql
+*.tgz
+*.log
+.env.*
+!.env.example

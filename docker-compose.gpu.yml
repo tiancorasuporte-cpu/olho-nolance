@@ -1,0 +1,16 @@
+# NVIDIA GPU (NVENC) for clip rendering. Requires the NVIDIA driver + NVIDIA Container Toolkit
+# (on Windows: Docker Desktop with WSL2 and an up-to-date NVIDIA driver).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+services:
+  media:
+    environment:
+      CLIP_ENCODER: nvenc
+      NVIDIA_DRIVER_CAPABILITIES: compute,video,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, video]

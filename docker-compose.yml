@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-olho}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-olho_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-olho_nolance}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-olho} -d ${POSTGRES_DB:-olho_nolance}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://olho:olho_secret@postgres:5432/olho_nolance}
+      MEDIA_INTERNAL_URL: ${MEDIA_INTERNAL_URL:-http://media:8001}
+      MEDIA_INTERNAL_TOKEN: ${MEDIA_INTERNAL_TOKEN:-media-internal-secret}
+      VIDEOS_PATH: ${VIDEOS_PATH:-/data/videos}
+      ADS_PATH: ${ADS_PATH:-/data/ads}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-long-random-string}
+      SUPERADMIN_USER: ${SUPERADMIN_USER:-superadmin}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-ancora}
+    volumes:
+      - videos:/data/videos
+      - ads:/data/ads
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      media:
+        condition: service_started
+
+  media:
+    build:
+      context: ./media
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      BUFFERS_PATH: ${BUFFERS_PATH:-/data/buffers}
+      VIDEOS_PATH: ${VIDEOS_PATH:-/data/videos}
+      ADS_PATH: ${ADS_PATH:-/data/ads}
+      MEDIA_INTERNAL_TOKEN: ${MEDIA_INTERNAL_TOKEN:-media-internal-secret}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
+      STREAM_MODE: ${STREAM_MODE:-auto}
+      CLIP_ENCODER: ${CLIP_ENCODER:-auto}
+      CLIP_RENDER_WORKERS: ${CLIP_RENDER_WORKERS:-0}
+    volumes:
+      - videos:/data/videos
+      - ads:/data/ads
+    # Replay ring buffer lives in RAM: constant rewrites would wear out an SSD.
+    # ~40 MB per 1080p camera; raise BUFFERS_RAM for many cameras (100 cams ≈ 4g).
+    tmpfs:
+      - /data/buffers:size=${BUFFERS_RAM:-1g}
+    ports:
+      - "8001:8001"
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_MEDIA_URL: ${VITE_MEDIA_URL:-http://localhost:8001}
+    restart: unless-stopped
+    ports:
+      - "3080:8080"
+    depends_on:
+      - api
+      - media
+
+volumes:
+  pgdata:
+  videos:
+  ads:
