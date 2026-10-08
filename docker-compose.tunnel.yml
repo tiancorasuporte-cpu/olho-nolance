@@ -1,0 +1,14 @@
+# Cloudflare Tunnel: publishes the system over HTTPS without opening router ports.
+# Set CLOUDFLARE_TUNNEL_TOKEN in .env and, in the Cloudflare dashboard (Zero Trust → Networks →
+# Tunnels → Public Hostname), point the hostname to the service:  http://web:8080
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?defina CLOUDFLARE_TUNNEL_TOKEN no .env}
+    depends_on:
+      - web

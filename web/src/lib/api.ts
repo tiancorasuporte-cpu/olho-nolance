@@ -1,17 +1,17 @@
-/** When the UI is opened via LAN IP (not localhost), talk to API/media on that same host. */
-function resolvePublicUrl(envUrl: string | undefined, port: number): string {
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host && host !== "localhost" && host !== "127.0.0.1" && host !== "[::1]") {
-      const proto = window.location.protocol === "https:" ? "https:" : "http:";
-      return `${proto}//${host}:${port}`;
-    }
+/**
+ * Production build: API and media are proxied by the web server under /api and /media on the
+ * same origin (works on LAN IP, localhost and behind the Cloudflare Tunnel / HTTPS).
+ * Vite dev server: talk to the services directly.
+ */
+function resolvePublicUrl(envUrl: string | undefined, prefix: string, port: number): string {
+  if (!import.meta.env.DEV && typeof window !== "undefined") {
+    return `${window.location.origin}${prefix}`;
   }
   return envUrl || `http://localhost:${port}`;
 }
 
-export const API_URL = resolvePublicUrl(import.meta.env.VITE_API_URL as string | undefined, 8000);
-export const MEDIA_URL = resolvePublicUrl(import.meta.env.VITE_MEDIA_URL as string | undefined, 8001);
+export const API_URL = resolvePublicUrl(import.meta.env.VITE_API_URL as string | undefined, "/api", 8000);
+export const MEDIA_URL = resolvePublicUrl(import.meta.env.VITE_MEDIA_URL as string | undefined, "/media", 8001);
 
 export type Role = "superadmin" | "admin" | "operator" | "player";
 

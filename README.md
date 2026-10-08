@@ -57,6 +57,20 @@ Se o device já tiver `camera_id` vinculado, o body pode ser `{}`.
 - **superadmin / admin** — CRUD de quadras, câmeras, usuários, devices e todos os clipes  
 - **operator** — vê só as quadras liberadas, aciona o botão e baixa clipes  
 
+## Acesso externo (Cloudflare Tunnel + nginx)
+
+O container `web` é um **nginx**: serve o site e encaminha `/api` → API e `/media` → media, tudo
+no mesmo endereço (porta 3080). O front sempre chama `/api` e `/media` da própria origem.
+
+Para publicar com HTTPS sem abrir portas no roteador:
+
+1. No `.env`: acrescente `;docker-compose.tunnel.yml` ao `COMPOSE_FILE` e defina `CLOUDFLARE_TUNNEL_TOKEN`.
+2. No painel Cloudflare (Zero Trust → Networks → Tunnels → seu túnel → Public Hostname):
+   hostname desejado → **Service: HTTP**, **URL: `web:8080`**.
+3. `docker compose up -d`.
+
+Botões ESP32 podem usar `https://SEU-DOMINIO/api/clips/button` (mesmo header `X-Device-Token`).
+
 ## Desempenho e hardware
 
 - **Câmeras em H.264**: o vídeo é copiado sem recodificar (~0,05 thread por câmera). Câmeras em
