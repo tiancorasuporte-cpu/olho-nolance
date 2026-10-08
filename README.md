@@ -29,7 +29,7 @@ Aguarde o health do Postgres e a API. Acesse:
 
 Na rede, use o IP do servidor (ex.: `http://192.168.0.10:3080`). O front detecta o host e chama API/media nesse mesmo IP. Libere no Firewall do Windows as portas **3080**, **8000** e **8001** (entrada TCP).
 
-**Login padrão:** `superadmin` / `ancora`
+**Login inicial:** o superadmin é criado na primeira subida com `SUPERADMIN_USER` / `SUPERADMIN_PASSWORD` do `.env`. Defina uma senha forte antes de expor o sistema na internet.
 
 ## Fluxo rápido de teste
 

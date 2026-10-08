@@ -3,8 +3,8 @@ import { useAuth } from "../lib/auth";
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [username, setUsername] = useState("superadmin");
-  const [password, setPassword] = useState("ancora");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -59,6 +59,8 @@ export function LoginPage() {
             onChange={(e) => setUsername(e.target.value)}
             style={inputStyle}
             autoComplete="username"
+            required
+            autoFocus
           />
         </label>
         <label style={{ display: "grid", gap: 6 }}>
@@ -69,6 +71,7 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
             autoComplete="current-password"
+            required
           />
         </label>
         {error && <div style={{ color: "var(--danger)", fontSize: 14 }}>{error}</div>}
