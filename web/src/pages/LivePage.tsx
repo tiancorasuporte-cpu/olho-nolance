@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { LivePlayer } from "../components/LivePlayer";
+import { CameraPreview } from "../components/CameraPreview";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
 import {
   cameraIdForHotkey,
   loadCameraHotkeys,
   type CameraHotkeys,
 } from "../lib/cameraHotkeys";
-import { api, clipStatusMessage, liveUrl, type Camera, type Venue } from "../lib/api";
+import { api, clipStatusMessage, type Camera, type Venue } from "../lib/api";
 
 export function LivePage() {
   const qc = useQueryClient();
@@ -16,6 +16,7 @@ export function LivePage() {
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: () => api.cameras.list() });
   const [venueId, setVenueId] = useState<number | "all">("all");
   const [focusId, setFocusId] = useState<number | null>(null);
+  const [liveId, setLiveId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<number>>(() => new Set());
   const [hotkeys, setHotkeys] = useState<CameraHotkeys>(loadCameraHotkeys);
@@ -107,7 +108,8 @@ export function LivePage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>AO VIVO</h1>
           <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
-            Clique na câmera para gravar o lance. Configure um botão USB por câmera em{" "}
+            Clique na imagem para ver ao vivo e em <strong>OLHO NO LANCE</strong> para gravar. Configure um
+            botão USB por câmera em{" "}
             <Link to="/botao-pc" style={{ color: "var(--accent)", fontWeight: 700 }}>
               Botão PC
             </Link>
@@ -176,32 +178,37 @@ export function LivePage() {
             return (
               <div
                 key={cam.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => fire(cam.id)}
-                onFocus={() => setFocusId(cam.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    fire(cam.id);
-                  }
-                }}
                 style={{
                   display: "grid",
                   border: isFocus ? "2px solid var(--accent)" : "1px solid var(--line)",
                   background: "rgba(0,0,0,0.35)",
                   overflow: "hidden",
-                  cursor: busy ? "wait" : "pointer",
                   opacity: busy ? 0.85 : 1,
                   animation: busy ? "pulse-glow 1.2s ease infinite" : undefined,
-                  outline: "none",
                 }}
               >
-                <div style={{ pointerEvents: "none" }}>
-                  <LivePlayer src={liveUrl(cam)} />
-                </div>
+                <CameraPreview
+                  camera={cam}
+                  live={liveId === cam.id}
+                  onToggleLive={() => {
+                    setFocusId(cam.id);
+                    setLiveId((cur) => (cur === cam.id ? null : cam.id));
+                  }}
+                />
                 <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => fire(cam.id)}
+                  onFocus={() => setFocusId(cam.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      fire(cam.id);
+                    }
+                  }}
                   style={{
+                    cursor: busy ? "wait" : "pointer",
+                    outline: "none",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",

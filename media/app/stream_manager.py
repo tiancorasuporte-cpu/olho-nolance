@@ -18,6 +18,9 @@ settings = get_settings()
 # Browsers (mpegts.js) and the clip pipeline accept H.264 as delivered by the camera
 COPYABLE_CODECS = {"h264"}
 
+SNAPSHOT_TTL_SEC = 4
+SNAPSHOT_WIDTH = 640
+
 X264_LIVE = [
     "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
     "-profile:v", "main", "-pix_fmt", "yuv420p",
@@ -63,6 +66,9 @@ class StreamWorker:
     _clients_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _recent: Deque[bytes] = field(default_factory=lambda: deque(maxlen=256), repr=False)
     _err_file: Optional[object] = field(default=None, repr=False)
+    _snapshot: Optional[bytes] = field(default=None, repr=False)
+    _snapshot_at: float = field(default=0.0, repr=False)
+    _snapshot_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     @property
     def buffer_dir(self) -> Path:
@@ -247,6 +253,33 @@ class StreamWorker:
 
     def is_alive(self) -> bool:
         return bool(self.process and self.process.poll() is None)
+
+    def snapshot(self) -> Optional[bytes]:
+        """Small JPEG of the latest buffered keyframe, cached so many viewers cost one decode."""
+        with self._snapshot_lock:
+            if self._snapshot and time.time() - self._snapshot_at < SNAPSHOT_TTL_SEC:
+                return self._snapshot
+            segments = sorted(self.ring_dir.glob("seg_*.ts"), key=lambda p: p.stat().st_mtime)
+            # The newest segment is still being written; segments start on a keyframe
+            source = segments[-2] if len(segments) >= 2 else (segments[-1] if segments else None)
+            if source is None:
+                return self._snapshot
+            try:
+                result = subprocess.run(
+                    [
+                        "ffmpeg", "-hide_banner", "-loglevel", "error",
+                        "-i", str(source), "-frames:v", "1",
+                        "-vf", f"scale={SNAPSHOT_WIDTH}:-2", "-q:v", "6",
+                        "-f", "image2", "-c:v", "mjpeg", "pipe:1",
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                )
+                if result.returncode == 0 and result.stdout:
+                    self._snapshot, self._snapshot_at = result.stdout, time.time()
+            except Exception:
+                logger.warning("snapshot failed camera=%s", self.camera_id)
+            return self._snapshot
 
     def _select_segments(self, duration_sec: int) -> list[Path]:
         """Segments covering the last `duration_sec` (by mtime = segment end time)."""

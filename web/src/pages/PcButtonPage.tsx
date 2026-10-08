@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { LivePlayer } from "../components/LivePlayer";
+import { CameraPreview } from "../components/CameraPreview";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
 import {
   cameraIdForHotkey,
@@ -10,7 +10,7 @@ import {
   saveCameraHotkeys,
   type CameraHotkeys,
 } from "../lib/cameraHotkeys";
-import { api, clipStatusMessage, liveUrl, type Venue } from "../lib/api";
+import { api, clipStatusMessage, type Venue } from "../lib/api";
 
 export function PcButtonPage() {
   const qc = useQueryClient();
@@ -20,6 +20,7 @@ export function PcButtonPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [hotkeys, setHotkeys] = useState<CameraHotkeys>(loadCameraHotkeys);
   const [listeningId, setListeningId] = useState<number | null>(null);
+  const [liveId, setLiveId] = useState<number | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<number>>(() => new Set());
   const pendingRef = useRef(pendingIds);
   const hotkeysRef = useRef(hotkeys);
@@ -214,27 +215,29 @@ export function PcButtonPage() {
                 }}
               >
                 <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => fire(cam.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      fire(cam.id);
-                    }
-                  }}
                   style={{
-                    cursor: busy ? "wait" : "pointer",
                     opacity: busy ? 0.85 : 1,
                     animation: busy ? "pulse-glow 1.2s ease infinite" : undefined,
-                    outline: "none",
                   }}
                 >
-                  <div style={{ pointerEvents: "none" }}>
-                    <LivePlayer src={liveUrl(cam)} />
-                  </div>
+                  <CameraPreview
+                    camera={cam}
+                    live={liveId === cam.id}
+                    onToggleLive={() => setLiveId((cur) => (cur === cam.id ? null : cam.id))}
+                  />
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fire(cam.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        fire(cam.id);
+                      }
+                    }}
                     style={{
+                      cursor: busy ? "wait" : "pointer",
+                      outline: "none",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",

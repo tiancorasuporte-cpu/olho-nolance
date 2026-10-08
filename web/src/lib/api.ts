@@ -279,3 +279,8 @@ export function liveUrl(camera: Camera): string | null {
   const path = camera.live_url || `/live/${camera.id}/stream.ts`;
   return `${MEDIA_URL}${path}`;
 }
+
+export function snapshotUrl(camera: Camera): string | null {
+  if (!camera.live_url && camera.status !== "streaming") return null;
+  return `${MEDIA_URL}/live/${camera.id}/snapshot.jpg`;
+}

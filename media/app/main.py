@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from app.clip_queue import encoder_name, render_queue
@@ -120,6 +120,21 @@ def live_status(camera_id: int):
         "status": worker.status if worker else "idle",
         "error": worker.error if worker else None,
     }
+
+
+@app.get("/live/{camera_id}/snapshot.jpg")
+async def live_snapshot(camera_id: int):
+    worker = manager.get(camera_id)
+    if not worker or not worker.is_alive():
+        raise HTTPException(status_code=404, detail="Stream not running")
+    image = await asyncio.to_thread(worker.snapshot)
+    if not image:
+        raise HTTPException(status_code=503, detail="Snapshot not available yet")
+    return Response(
+        content=image,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"},
+    )
 
 
 @app.get("/live/{camera_id}/stream.ts")
