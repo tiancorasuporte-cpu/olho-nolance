@@ -12,9 +12,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { LivePage } from "./pages/LivePage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { VenuesPage } from "./pages/VenuesPage";
-import { CamerasPage } from "./pages/CamerasPage";
+import { VenueDetailPage } from "./pages/VenueDetailPage";
 import { UsersPage } from "./pages/UsersPage";
-import { DevicesPage } from "./pages/DevicesPage";
 import { PcButtonPage } from "./pages/PcButtonPage";
 import { AdsPage } from "./pages/AdsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -83,14 +82,25 @@ const quadrasRoute = createRoute({
   ),
 });
 
+const quadraDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/quadras/$venueId",
+  component: function QuadraDetail() {
+    const { venueId } = quadraDetailRoute.useParams();
+    return (
+      <Guarded>
+        <VenueDetailPage venueId={Number(venueId)} />
+      </Guarded>
+    );
+  },
+});
+
 const camerasRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/cameras",
-  component: () => (
-    <Guarded>
-      <CamerasPage />
-    </Guarded>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/quadras" });
+  },
 });
 
 const usuariosRoute = createRoute({
@@ -106,11 +116,9 @@ const usuariosRoute = createRoute({
 const devicesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/devices",
-  component: () => (
-    <Guarded>
-      <DevicesPage />
-    </Guarded>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/quadras" });
+  },
 });
 
 const botaoPcRoute = createRoute({
@@ -156,6 +164,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   historicoRoute,
   quadrasRoute,
+  quadraDetailRoute,
   camerasRoute,
   usuariosRoute,
   devicesRoute,

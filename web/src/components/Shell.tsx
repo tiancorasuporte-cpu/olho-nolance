@@ -8,10 +8,8 @@ const links = [
   { to: "/botao-pc", label: "Botão PC" },
   { to: "/historico", label: "Histórico" },
   { to: "/quadras", label: "Quadras" },
-  { to: "/cameras", label: "Câmeras" },
   { to: "/usuarios", label: "Usuários", admin: true },
   { to: "/propaganda", label: "Propaganda", admin: true },
-  { to: "/devices", label: "Devices", admin: true },
   { to: "/configuracoes", label: "Configurações", admin: true },
 ];
 
@@ -54,7 +52,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className={`app-nav-wrap${menuOpen ? " open" : ""}`}>
           <nav className="app-nav">
             {visibleLinks.map((l) => {
-              const active = pathname === l.to || (isPlayer(user) && l.to === "/historico");
+              const active =
+                pathname === l.to ||
+                (l.to !== "/" && pathname.startsWith(`${l.to}/`)) ||
+                (isPlayer(user) && l.to === "/historico");
               return (
                 <Link key={l.to} to={l.to} className={`app-nav-link${active ? " active" : ""}`}>
                   {l.label}

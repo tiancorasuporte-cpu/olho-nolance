@@ -34,13 +34,13 @@ Na rede, use o IP do servidor (ex.: `http://192.168.0.10:3080`). O front detecta
 ## Fluxo rápido de teste
 
 1. Entre na web e vá em **Quadras** → crie uma quadra.
-2. Em **Câmeras** → cadastre um RTSP (`rtsp://...`) e aguarde status `streaming`.
+2. Abra a quadra → cadastre a câmera (`rtsp://...`) e aguarde status `streaming`.
 3. Em **Ao vivo** → selecione a câmera, veja o HLS e clique em **OLHO NO LANCE**.
 4. Em **Histórico** → baixe o MP4 quando status for `ready`.
 
 ### Botão físico (device token)
 
-1. Em **Devices** → gere um token (copie na hora).
+1. Em **Quadras** → abra a quadra → na câmera, em **Botões**, gere um token (copie na hora).
 2. Acione:
 
 ```bash
