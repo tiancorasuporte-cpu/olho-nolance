@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { SportsArt } from "../components/SportsArt";
 import { useAuth } from "../lib/auth";
 
 export function LoginPage() {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,88 +24,67 @@ export function LoginPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        padding: 24,
-      }}
-    >
-      <form
-        onSubmit={onSubmit}
-        className="fade-up"
-        style={{
-          width: "min(420px, 100%)",
-          padding: 32,
-          background: "var(--card)", borderRadius: "var(--radius)",
-          border: "1px solid var(--line)",
-          display: "grid",
-          gap: 16,
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <img
-            src="/logo.png"
-            alt="ONL Sports · Olho no Lance"
-            style={{ width: "100%", maxWidth: 340, display: "block", margin: "0 auto", borderRadius: "var(--radius-sm)" }}
-          />
-          <p style={{ margin: "8px 0 0", color: "var(--muted)" }}>
-            Play · Registra · Compartilha
-          </p>
+    <div className="login-root">
+      <div className="login-smoke s1" />
+      <div className="login-smoke s2" />
+      <div className="login-smoke s3" />
+
+      <section className="login-hero">
+        <img src="/logo.png" alt="ONL Sports" className="login-logo" />
+        <div className="login-art">
+          <SportsArt />
         </div>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ color: "var(--muted)", fontSize: 13 }}>Usuário</span>
+        <div className="login-caption">
+          <h1>Olho no Lance</h1>
+          <p>Play · Registra · Compartilha. O replay do seu jogo, pronto para postar.</p>
+        </div>
+      </section>
+
+      <form onSubmit={onSubmit} className="login-panel">
+        <div className="login-tabs">
+          <span className="active">Entrar</span>
+        </div>
+
+        <label className="login-field">
+          <span>Usuário</span>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            style={inputStyle}
             autoComplete="username"
             required
             autoFocus
           />
         </label>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ color: "var(--muted)", fontSize: 13 }}>Senha</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
-            autoComplete="current-password"
-            required
-          />
+        <label className="login-field">
+          <span>Senha</span>
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              style={{ paddingRight: 64 }}
+            />
+            <button
+              type="button"
+              className="login-peek"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            >
+              {showPassword ? "ocultar" : "mostrar"}
+            </button>
+          </div>
         </label>
-        {error && <div style={{ color: "var(--danger)", fontSize: 14 }}>{error}</div>}
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            ...btnPrimary,
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
+
+        {error && <div className="login-error">{error}</div>}
+
+        <button type="submit" disabled={loading} className="login-submit">
           {loading ? "Entrando…" : "Entrar"}
         </button>
+
+        <p className="login-foot">ONL Sports · Olho no Lance</p>
       </form>
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  background: "var(--field)", borderRadius: "var(--radius-sm)",
-  border: "1px solid var(--line)",
-  color: "var(--text)",
-  padding: "10px 12px",
-  outline: "none",
-};
-
-const btnPrimary: React.CSSProperties = {
-  background: "var(--accent)",
-  color: "var(--bg)",
-  border: "none",
-  padding: "12px 16px",
-  fontWeight: 700,
-  cursor: "pointer",
-  letterSpacing: "0.04em",
-};
