@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { SportsArt } from "../components/SportsArt";
 import { useAuth } from "../lib/auth";
 
 export function LoginPage() {
@@ -30,9 +29,8 @@ export function LoginPage() {
       <div className="login-smoke s3" />
 
       <section className="login-hero">
-        <img src="/logo.png" alt="ONL Sports" className="login-logo" />
         <div className="login-art">
-          <SportsArt />
+          <img src="/login-art.png" alt="" />
         </div>
         <div className="login-caption">
           <h1>Olho no Lance</h1>
@@ -41,6 +39,7 @@ export function LoginPage() {
       </section>
 
       <form onSubmit={onSubmit} className="login-panel">
+        <img src="/logo.png" alt="ONL Sports" className="login-logo" />
         <div className="login-tabs">
           <span className="active">Entrar</span>
         </div>

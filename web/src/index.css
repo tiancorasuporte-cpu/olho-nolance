@@ -169,7 +169,6 @@ select option {
   left: -10vw;
   top: 10vh;
   background: rgba(255, 107, 0, 0.12);
-  animation: smoke-a 18s ease-in-out infinite alternate;
 }
 
 .login-smoke.s2 {
@@ -178,7 +177,6 @@ select option {
   right: -8vw;
   bottom: -10vh;
   background: rgba(200, 200, 200, 0.07);
-  animation: smoke-b 22s ease-in-out infinite alternate;
 }
 
 .login-smoke.s3 {
@@ -187,40 +185,23 @@ select option {
   left: 30vw;
   bottom: -12vh;
   background: rgba(255, 140, 40, 0.09);
-  animation: smoke-a 26s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes smoke-a {
-  from {
-    transform: translate(0, 0) scale(1);
-  }
-  to {
-    transform: translate(6vw, -4vh) scale(1.15);
-  }
-}
-
-@keyframes smoke-b {
-  from {
-    transform: translate(0, 0) scale(1.1);
-  }
-  to {
-    transform: translate(-5vw, -6vh) scale(0.95);
-  }
 }
 
 .login-hero {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   padding: 36px 44px;
   min-width: 0;
 }
 
 .login-logo {
-  width: 150px;
+  width: 220px;
+  max-width: 70%;
   height: auto;
   display: block;
+  margin: 0 auto 12px;
 }
 
 .login-art {
@@ -228,9 +209,17 @@ select option {
   position: relative;
 }
 
-.login-art > canvas {
+.login-art > img {
   position: absolute;
   inset: 0;
+  margin: auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
 }
 
 .login-caption h1 {
@@ -363,7 +352,7 @@ select option {
   }
 
   .login-logo {
-    width: 110px;
+    width: 170px;
   }
 
   .login-art {
@@ -379,12 +368,6 @@ select option {
     border-left: none;
     border-top: 1px solid var(--line);
     padding: 28px 22px 36px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-smoke {
-    animation: none !important;
   }
 }
 
