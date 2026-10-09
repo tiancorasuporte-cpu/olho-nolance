@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, user_can_access_venue
+from app.auth import get_current_user, user_can_access_venue, user_can_manage_venue
 from app.config import get_settings
 from app.db import get_db
 from app.media_client import media_client
@@ -41,9 +41,16 @@ def list_cameras(
             raise HTTPException(status_code=403, detail="Forbidden")
         q = q.filter(Camera.venue_id == venue_id)
     cameras = q.all()
-    if user.role in ("superadmin", "admin"):
-        return [camera_to_out(c) for c in cameras]
     return [camera_to_out(c) for c in cameras if user_can_access_venue(user, c.venue_id)]
+
+
+def _managed_camera(db: Session, user: User, camera_id: int) -> Camera:
+    cam = db.get(Camera, camera_id)
+    if not cam:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    if not user_can_manage_venue(user, cam.venue_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return cam
 
 
 @router.post("", response_model=CameraOut)
@@ -52,7 +59,7 @@ async def create_camera(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role not in ("superadmin", "admin"):
+    if not user_can_manage_venue(user, body.venue_id):
         raise HTTPException(status_code=403, detail="Forbidden")
     venue = db.get(Venue, body.venue_id)
     if not venue:
@@ -102,11 +109,7 @@ async def update_camera(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role not in ("superadmin", "admin"):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    cam = db.get(Camera, camera_id)
-    if not cam:
-        raise HTTPException(status_code=404, detail="Camera not found")
+    cam = _managed_camera(db, user, camera_id)
     restart = False
     if body.name is not None:
         cam.name = body.name
@@ -153,11 +156,7 @@ async def start_camera(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role not in ("superadmin", "admin"):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    cam = db.get(Camera, camera_id)
-    if not cam:
-        raise HTTPException(status_code=404, detail="Camera not found")
+    cam = _managed_camera(db, user, camera_id)
     try:
         await media_client.start_stream(cam.id, cam.rtsp_url, cam.buffer_seconds)
         cam.status = "streaming"
@@ -177,11 +176,7 @@ async def stop_camera(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role not in ("superadmin", "admin"):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    cam = db.get(Camera, camera_id)
-    if not cam:
-        raise HTTPException(status_code=404, detail="Camera not found")
+    cam = _managed_camera(db, user, camera_id)
     try:
         await media_client.stop_stream(cam.id)
     except Exception:
@@ -198,11 +193,7 @@ async def delete_camera(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role not in ("superadmin", "admin"):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    cam = db.get(Camera, camera_id)
-    if not cam:
-        raise HTTPException(status_code=404, detail="Camera not found")
+    cam = _managed_camera(db, user, camera_id)
     try:
         await media_client.stop_stream(cam.id)
     except Exception:

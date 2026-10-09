@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AdList, AdUploadForm, adSectionBox } from "../components/AdManager";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
 import { api } from "../lib/api";
-import { isAdmin, useAuth } from "../lib/auth";
+import { isAdmin, isGlobalAdmin, useAuth } from "../lib/auth";
 
 export function AdsPage() {
   const { user } = useAuth();
@@ -36,16 +36,18 @@ export function AdsPage() {
 
       <AdGuide />
 
-      <section style={adSectionBox}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 18 }}>Propagandas gerais (todas as quadras)</div>
-          <div style={{ color: "var(--muted)", fontSize: 13 }}>
-            Usadas quando a quadra e a câmera não têm propaganda própria naquela faixa.
+      {isGlobalAdmin(user) && (
+        <section style={adSectionBox}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>Propagandas gerais (todas as quadras)</div>
+            <div style={{ color: "var(--muted)", fontSize: 13 }}>
+              Usadas quando a quadra e a câmera não têm propaganda própria naquela faixa.
+            </div>
           </div>
-        </div>
-        <AdUploadForm />
-        <AdList ads={globalAds} emptyText="Nenhuma propaganda geral." />
-      </section>
+          <AdUploadForm />
+          <AdList ads={globalAds} emptyText="Nenhuma propaganda geral." />
+        </section>
+      )}
 
       <section style={{ display: "grid", gap: 10 }}>
         <h2 style={{ margin: 0, fontSize: 22, textTransform: "uppercase" }}>Quadras</h2>

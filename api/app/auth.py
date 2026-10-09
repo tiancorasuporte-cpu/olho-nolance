@@ -95,8 +95,37 @@ def require_roles(*roles: str):
     return _dep
 
 
+def is_global_admin(user: User) -> bool:
+    """Superadmin, or admin not linked to any venue."""
+    if user.role == "superadmin":
+        return True
+    return user.role == "admin" and not parse_venue_ids(user.venue_ids)
+
+
+def managed_venue_ids(user: User) -> Optional[set[int]]:
+    """Venues an admin manages: None = all (global admin); empty set = none (not an admin)."""
+    if is_global_admin(user):
+        return None
+    if user.role == "admin":
+        return set(parse_venue_ids(user.venue_ids))
+    return set()
+
+
+def user_can_manage_venue(user: User, venue_id: Optional[int]) -> bool:
+    scope = managed_venue_ids(user)
+    if scope is None:
+        return True
+    return venue_id is not None and venue_id in scope
+
+
+def require_global_admin(user: User = Depends(get_current_user)) -> User:
+    if not is_global_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas admin geral")
+    return user
+
+
 def user_can_access_venue(user: User, venue_id: int) -> bool:
-    if user.role in ("superadmin", "admin"):
+    if is_global_admin(user):
         return True
     if user.role == "player":
         return False

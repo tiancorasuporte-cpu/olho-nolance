@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ROLE_LABELS } from "../lib/api";
-import { isAdmin, isPlayer, useAuth } from "../lib/auth";
+import { isAdmin, isGlobalAdmin, isPlayer, useAuth } from "../lib/auth";
 
 const links = [
   { to: "/", label: "Ao vivo" },
@@ -10,7 +10,7 @@ const links = [
   { to: "/quadras", label: "Quadras" },
   { to: "/usuarios", label: "Usuários", admin: true },
   { to: "/propaganda", label: "Propaganda", admin: true },
-  { to: "/configuracoes", label: "Configurações", admin: true },
+  { to: "/configuracoes", label: "Configurações", admin: true, global: true },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -20,9 +20,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setMenuOpen(false), [pathname]);
 
-  const visibleLinks = links.filter((l) =>
-    isPlayer(user) ? l.to === "/lances" : !l.admin || isAdmin(user),
-  );
+  const visibleLinks = links.filter((l) => {
+    if (isPlayer(user)) return l.to === "/lances";
+    if ("global" in l && l.global) return isGlobalAdmin(user);
+    return !l.admin || isAdmin(user);
+  });
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>

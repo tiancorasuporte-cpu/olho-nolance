@@ -10,6 +10,8 @@ from app.auth import (
     get_current_user,
     get_device_by_token,
     get_user_from_bearer_or_query,
+    is_global_admin,
+    parse_venue_ids,
     require_internal_token,
     user_can_access_venue,
     user_can_view_venue,
@@ -129,9 +131,9 @@ def list_clips(
     if to_date:
         q = q.filter(Clip.created_at <= to_date)
 
+    if user.role != "player" and not is_global_admin(user):
+        q = q.filter(Clip.venue_id.in_(parse_venue_ids(user.venue_ids) or [-1]))
     clips = q.limit(limit).all()
-    if user.role in ("superadmin", "admin"):
-        return [clip_to_out(c) for c in clips]
     return [clip_to_out(c) for c in clips if user_can_view_venue(user, c.venue_id)]
 
 

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { isAdmin, useAuth } from "../lib/auth";
+import { isGlobalAdmin, useAuth } from "../lib/auth";
 
 const PRESETS = [1, 3, 7, 15, 30, 90];
 
@@ -35,7 +35,7 @@ export function SettingsPage() {
     onError: (e: Error) => setMessage(e.message),
   });
 
-  if (!isAdmin(user)) {
+  if (!isGlobalAdmin(user)) {
     return <div style={{ color: "var(--muted)" }}>Acesso restrito a admins.</div>;
   }
 

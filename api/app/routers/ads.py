@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, get_user_from_bearer_or_query, require_roles
+from app.auth import (
+    get_current_user,
+    get_user_from_bearer_or_query,
+    is_global_admin,
+    require_roles,
+    user_can_manage_venue,
+    user_can_view_venue,
+)
 from app.config import get_settings
 from app.db import get_db
 from app.models import Ad, Camera, User, Venue
@@ -33,17 +40,28 @@ def ad_to_out(ad: Ad) -> AdOut:
     )
 
 
+def _managed_ad(db: Session, user: User, ad_id: int) -> Ad:
+    ad = db.get(Ad, ad_id)
+    if not ad:
+        raise HTTPException(status_code=404, detail="Ad not found")
+    if not user_can_manage_venue(user, ad.venue_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return ad
+
+
 @router.get("", response_model=list[AdOut])
 def list_ads(
     active_only: bool = False,
     venue_id: int | None = None,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
     q = db.query(Ad).order_by(Ad.sort_order.asc(), Ad.id.desc())
     if active_only:
         q = q.filter(Ad.active.is_(True))
     ads = q.all()
+    if not is_global_admin(user):
+        ads = [a for a in ads if a.venue_id is None or user_can_view_venue(user, a.venue_id)]
     if venue_id is not None:
         ads = [a for a in ads if a.venue_id is None or a.venue_id == venue_id]
     return [ad_to_out(a) for a in ads]
@@ -60,7 +78,7 @@ async def create_ad(
     active: bool = Form(True),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles("admin", "superadmin")),
+    user: User = Depends(require_roles("admin", "superadmin")),
 ):
     if camera_id is not None:
         cam = db.get(Camera, camera_id)
@@ -69,6 +87,8 @@ async def create_ad(
         venue_id = cam.venue_id
     if venue_id is not None and not db.get(Venue, venue_id):
         raise HTTPException(status_code=400, detail="Venue not found")
+    if not user_can_manage_venue(user, venue_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     if placement not in ("top", "bottom"):
         raise HTTPException(status_code=400, detail="placement deve ser top ou bottom")
@@ -107,14 +127,14 @@ def update_ad(
     ad_id: int,
     body: AdUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles("admin", "superadmin")),
+    user: User = Depends(require_roles("admin", "superadmin")),
 ):
-    ad = db.get(Ad, ad_id)
-    if not ad:
-        raise HTTPException(status_code=404, detail="Ad not found")
+    ad = _managed_ad(db, user, ad_id)
     if body.title is not None:
         ad.title = body.title
     if body.venue_id is not None:
+        if not user_can_manage_venue(user, body.venue_id or None):
+            raise HTTPException(status_code=403, detail="Forbidden")
         if body.venue_id == 0:
             ad.venue_id = None
         else:
@@ -139,11 +159,9 @@ def update_ad(
 def delete_ad(
     ad_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles("admin", "superadmin")),
+    user: User = Depends(require_roles("admin", "superadmin")),
 ):
-    ad = db.get(Ad, ad_id)
-    if not ad:
-        raise HTTPException(status_code=404, detail="Ad not found")
+    ad = _managed_ad(db, user, ad_id)
     path = Path(settings.ads_path) / ad.file_path
     db.delete(ad)
     db.commit()

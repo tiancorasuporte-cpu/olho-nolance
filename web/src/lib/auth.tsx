@@ -75,6 +75,12 @@ export function isAdmin(user: User | null) {
   return user?.role === "admin" || user?.role === "superadmin";
 }
 
+/** Superadmin, or admin not linked to any venue (manages everything). */
+export function isGlobalAdmin(user: User | null) {
+  if (user?.role === "superadmin") return true;
+  return user?.role === "admin" && user.venue_ids.length === 0;
+}
+
 export function isPlayer(user: User | null) {
   return user?.role === "player";
 }

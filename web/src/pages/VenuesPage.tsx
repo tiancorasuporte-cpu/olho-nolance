@@ -4,7 +4,7 @@ import { useState } from "react";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
 import { DeviceList } from "./VenueDetailPage";
 import { api } from "../lib/api";
-import { isAdmin, useAuth } from "../lib/auth";
+import { isAdmin, isGlobalAdmin, useAuth } from "../lib/auth";
 
 export function VenuesPage() {
   const { user } = useAuth();
@@ -51,11 +51,13 @@ export function VenuesPage() {
       <div>
         <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>QUADRAS</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
-          Cadastre a quadra e abra-a para gerenciar as câmeras e os botões de cada câmera.
+          {isGlobalAdmin(user)
+            ? "Cadastre a quadra e abra-a para gerenciar as câmeras e os botões de cada câmera."
+            : "Suas quadras. Abra uma para gerenciar as câmeras e os botões de cada câmera."}
         </p>
       </div>
 
-      {isAdmin(user) && (
+      {isGlobalAdmin(user) && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -147,7 +149,7 @@ export function VenuesPage() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {isAdmin(user) && (
+                {isGlobalAdmin(user) && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -171,7 +173,7 @@ export function VenuesPage() {
         })}
       </div>
 
-      {isAdmin(user) && unassigned.length > 0 && (
+      {isGlobalAdmin(user) && unassigned.length > 0 && (
         <section style={{ display: "grid", gap: 10 }}>
           <h2 style={{ margin: 0, fontSize: 20, textTransform: "uppercase" }}>Botões sem quadra</h2>
           <p style={{ margin: 0, color: "var(--muted)", fontSize: 14 }}>
