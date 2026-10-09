@@ -17,6 +17,9 @@ def ensure_schema() -> None:
             conn.exec_driver_sql("alter table venues add column city varchar(120)")
         if not column_exists(conn, "ads", "placement"):
             conn.exec_driver_sql("alter table ads add column placement varchar(10) not null default 'bottom'")
+        if not column_exists(conn, "ads", "camera_id"):
+            conn.exec_driver_sql("alter table ads add column camera_id integer references cameras(id)")
+            conn.exec_driver_sql("create index if not exists ix_ads_camera_id on ads (camera_id)")
         if not column_exists(conn, "clips", "error_message"):
             conn.exec_driver_sql("alter table clips add column error_message text")
         if not index_exists(conn, "ix_clips_created_at"):

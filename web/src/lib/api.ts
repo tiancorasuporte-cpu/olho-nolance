@@ -106,6 +106,7 @@ export type Ad = {
   title: string;
   file_path: string;
   venue_id: number | null;
+  camera_id: number | null;
   duration_sec: number;
   placement: AdPlacement;
   sort_order: number;
@@ -235,6 +236,7 @@ export const api = {
       duration_sec?: number;
       placement?: AdPlacement;
       venue_id?: number | null;
+      camera_id?: number | null;
       sort_order?: number;
     }) => {
       const form = new FormData();
@@ -244,6 +246,7 @@ export const api = {
       form.append("placement", body.placement ?? "bottom");
       form.append("sort_order", String(body.sort_order ?? 0));
       if (body.venue_id != null) form.append("venue_id", String(body.venue_id));
+      if (body.camera_id != null) form.append("camera_id", String(body.camera_id));
       const res = await fetch(`${API_URL}/ads`, {
         method: "POST",
         headers: { ...authHeaders() },

@@ -1,72 +1,28 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { AdList, AdUploadForm, adSectionBox } from "../components/AdManager";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
-import { AD_PLACEMENT_LABELS, api, type AdPlacement } from "../lib/api";
+import { api } from "../lib/api";
 import { isAdmin, useAuth } from "../lib/auth";
 
 export function AdsPage() {
   const { user } = useAuth();
-  const qc = useQueryClient();
   const venues = useQuery({ queryKey: ["venues"], queryFn: api.venues.list });
-  const ads = useQuery({
-    queryKey: ["ads", "all"],
-    queryFn: () => api.ads.list(),
-    enabled: isAdmin(user),
-  });
-
-  const [title, setTitle] = useState("");
-  const [venueId, setVenueId] = useState("");
-  const [placement, setPlacement] = useState<AdPlacement>("bottom");
-  const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const cameras = useQuery({ queryKey: ["cameras"], queryFn: () => api.cameras.list() });
+  const ads = useQuery({ queryKey: ["ads", "all"], queryFn: () => api.ads.list(), enabled: isAdmin(user) });
   const [query, setQuery] = useState("");
-
-  const create = useMutation({
-    mutationFn: () => {
-      if (!file) throw new Error("Selecione uma imagem");
-      return api.ads.create({
-        title: title || file.name,
-        file,
-        placement,
-        venue_id: venueId ? Number(venueId) : null,
-      });
-    },
-    onSuccess: () => {
-      setTitle("");
-      setFile(null);
-      setError(null);
-      void qc.invalidateQueries({ queryKey: ["ads"] });
-    },
-    onError: (e: Error) => setError(e.message),
-  });
-
-  const toggle = useMutation({
-    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
-      api.ads.update(id, { active }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["ads"] }),
-  });
-
-  const remove = useMutation({
-    mutationFn: (id: number) => api.ads.remove(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["ads"] }),
-  });
-
-  const venueName = (id: number | null) =>
-    id == null ? "todas as quadras" : venues.data?.find((v) => v.id === id)?.name || `quadra #${id}`;
-  const allAds = ads.data || [];
-  const visibleAds = allAds.filter((ad) =>
-    matchesSearch(
-      query,
-      ad.title,
-      venueName(ad.venue_id),
-      ad.active ? "ativa" : "inativa",
-      AD_PLACEMENT_LABELS[ad.placement],
-    ),
-  );
 
   if (!isAdmin(user)) {
     return <div style={{ color: "var(--muted)" }}>Acesso restrito a admins.</div>;
   }
+
+  const allAds = ads.data || [];
+  const globalAds = allAds.filter((a) => a.venue_id == null && a.camera_id == null);
+  const allVenues = venues.data || [];
+  const visibleVenues = allVenues.filter((v) => matchesSearch(query, v.id, v.name, v.city));
+  const camCount = (venueId: number) => (cameras.data || []).filter((c) => c.venue_id === venueId).length;
+  const adsOf = (venueId: number) => allAds.filter((a) => a.venue_id === venueId);
 
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
@@ -78,178 +34,121 @@ export function AdsPage() {
         </p>
       </div>
 
-      <div style={layoutBox} className="ads-layout">
-        <div style={phoneMock}>
-          <div style={{ ...mockBar, height: "12.5%", borderBottom: "2px solid var(--accent)" }}>
-            faixa superior
-          </div>
-          <div style={{ flex: 1, display: "grid", placeItems: "center", color: "var(--muted)" }}>vídeo</div>
-          <div
-            style={{
-              ...mockBar,
-              height: "18.75%",
-              borderTop: "2px solid var(--accent)",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-            }}
-          >
-            <span>1</span>
-            <span>2</span>
-            <span>3</span>
+      <AdGuide />
+
+      <section style={adSectionBox}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 18 }}>Propagandas gerais (todas as quadras)</div>
+          <div style={{ color: "var(--muted)", fontSize: 13 }}>
+            Usadas quando a quadra e a câmera não têm propaganda própria naquela faixa.
           </div>
         </div>
-        <div style={{ display: "grid", gap: 8, fontSize: 14, alignContent: "start" }}>
-          <strong style={{ color: "var(--accent)" }}>Dimensões recomendadas (PNG com fundo transparente fica melhor)</strong>
-          <div>
-            <b>Faixa superior</b>: 1 imagem de <b>1080 × 240 px</b> (logo da arena / patrocinador master).
-          </div>
-          <div>
-            <b>Faixa inferior</b>: até 3 patrocinadores lado a lado, pela ordem de cadastro.
-            <br />1 imagem: <b>1080 × 360 px</b> · 2 imagens: <b>540 × 360 px</b> cada · 3 imagens:{" "}
-            <b>360 × 360 px</b> cada.
-          </div>
-          <div style={{ color: "var(--muted)" }}>
-            O vídeo ocupa o espaço que sobra (1080 × 1320 com as duas faixas), com corte central da
-            câmera. Imagens de outro tamanho são encaixadas sem distorcer. Sem propaganda, o vídeo
-            ocupa a tela toda.
-          </div>
-        </div>
-      </div>
+        <AdUploadForm />
+        <AdList ads={globalAds} emptyText="Nenhuma propaganda geral." />
+      </section>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          create.mutate();
-        }}
-        style={{
-          display: "grid",
-          gap: 10,
-          gridTemplateColumns: "1.3fr 1fr 1.3fr 1.2fr auto",
-          padding: 16,
-          border: "1px solid var(--line)",
-          background: "rgba(26,26,26,0.7)",
-        }}
-        className="ads-form"
-      >
-        <input
-          placeholder="Título (ex: Patrocinador X)"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={inputStyle}
+      <section style={{ display: "grid", gap: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 22, textTransform: "uppercase" }}>Quadras</h2>
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Buscar quadra por nome ou cidade…"
+          count={{ shown: visibleVenues.length, total: allVenues.length }}
         />
-        <select value={venueId} onChange={(e) => setVenueId(e.target.value)} style={inputStyle}>
-          <option value="">Todas as quadras</option>
-          {(venues.data || []).map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={placement}
-          onChange={(e) => setPlacement(e.target.value as AdPlacement)}
-          style={inputStyle}
-        >
-          <option value="bottom">{AD_PLACEMENT_LABELS.bottom}</option>
-          <option value="top">{AD_PLACEMENT_LABELS.top}</option>
-        </select>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          style={{ ...inputStyle, padding: 8 }}
-        />
-        <button type="submit" style={btnStyle} disabled={create.isPending || !file}>
-          Enviar
-        </button>
-      </form>
-      {error && <div style={{ color: "var(--danger)" }}>{error}</div>}
-
-      <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Buscar propaganda por título ou quadra…"
-        count={{ shown: visibleAds.length, total: allAds.length }}
-      />
-
-      <div style={{ display: "grid", gap: 12 }}>
-        {visibleAds.map((ad) => (
-          <div
-            key={ad.id}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "160px 1fr auto",
-              gap: 14,
-              padding: 12,
-              border: "1px solid var(--line)",
-              background: "rgba(0,0,0,0.2)",
-              alignItems: "center",
-            }}
-            className="ad-row"
-          >
-            <img
-              src={api.ads.imageUrl(ad.id)}
-              alt={ad.title}
-              style={{ width: "100%", height: 90, objectFit: "contain", background: "#000" }}
-            />
-            <div>
-              <div style={{ fontWeight: 700 }}>{ad.title}</div>
-              <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                {ad.active ? "ativa" : "inativa"} · {AD_PLACEMENT_LABELS[ad.placement]} ·{" "}
-                {venueName(ad.venue_id)}
+        {visibleVenues.length === 0 && <div style={{ color: "var(--muted)" }}>Nenhuma quadra encontrada.</div>}
+        {visibleVenues.map((v) => {
+          const venueAds = adsOf(v.id);
+          const active = venueAds.filter((a) => a.active).length;
+          const cams = camCount(v.id);
+          return (
+            <Link
+              key={v.id}
+              to="/propaganda/$venueId"
+              params={{ venueId: String(v.id) }}
+              className="venue-card"
+              style={cardLink}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 18 }}>
+                  {v.name}
+                  {v.city && <span style={{ color: "var(--accent)", fontWeight: 600 }}> · {v.city}</span>}
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: 14 }}>
+                  {cams} {cams === 1 ? "câmera" : "câmeras"} · {venueAds.length}{" "}
+                  {venueAds.length === 1 ? "propaganda" : "propagandas"}
+                  {venueAds.length > 0 && ` (${active} ativas)`}
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                type="button"
-                style={ghostBtn}
-                onClick={() => toggle.mutate({ id: ad.id, active: !ad.active })}
-              >
-                {ad.active ? "Pausar" : "Ativar"}
-              </button>
-              <button
-                type="button"
-                style={{ ...ghostBtn, color: "var(--danger)", borderColor: "var(--danger)" }}
-                onClick={() => {
-                  if (window.confirm(`Apagar "${ad.title}"?`)) remove.mutate(ad.id);
-                }}
-              >
-                Apagar
-              </button>
-            </div>
-          </div>
-        ))}
-        {allAds.length === 0 && (
-          <div style={{ color: "var(--muted)" }}>Nenhuma propaganda cadastrada ainda.</div>
-        )}
-        {allAds.length > 0 && visibleAds.length === 0 && (
-          <div style={{ color: "var(--muted)" }}>Nenhuma propaganda encontrada.</div>
-        )}
-      </div>
+              <span style={{ color: "var(--accent)", fontWeight: 700 }}>Abrir →</span>
+            </Link>
+          );
+        })}
+      </section>
 
       <style>{`
+        .venue-card:hover { border-color: var(--accent) !important; }
         @media (max-width: 900px) {
-          .ads-form, .ad-row, .ads-layout { grid-template-columns: 1fr !important; }
+          .ad-row, .ads-layout { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
-  border: "1px solid var(--line)",
-  color: "var(--text)",
-  padding: "10px 12px",
-};
+function AdGuide() {
+  return (
+    <div style={layoutBox} className="ads-layout">
+      <div style={phoneMock}>
+        <div style={{ ...mockBar, height: "12.5%", borderBottom: "2px solid var(--accent)" }}>faixa superior</div>
+        <div style={{ flex: 1, display: "grid", placeItems: "center", color: "var(--muted)" }}>vídeo</div>
+        <div
+          style={{
+            ...mockBar,
+            height: "18.75%",
+            borderTop: "2px solid var(--accent)",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+          }}
+        >
+          <span>1</span>
+          <span>2</span>
+          <span>3</span>
+        </div>
+      </div>
+      <div style={{ display: "grid", gap: 8, fontSize: 14, alignContent: "start" }}>
+        <strong style={{ color: "var(--accent)" }}>Dimensões recomendadas (PNG com fundo transparente fica melhor)</strong>
+        <div>
+          <b>Faixa superior</b>: 1 imagem de <b>1080 × 240 px</b> (logo da arena / patrocinador master).
+        </div>
+        <div>
+          <b>Faixa inferior</b>: até 3 patrocinadores lado a lado, pela ordem de cadastro.
+          <br />1 imagem: <b>1080 × 360 px</b> · 2 imagens: <b>540 × 360 px</b> cada · 3 imagens:{" "}
+          <b>360 × 360 px</b> cada.
+        </div>
+        <div>
+          <b>Prioridade</b>: em cada faixa vale a propaganda da <b>câmera</b>; se a câmera não tiver, a da{" "}
+          <b>quadra</b>; se a quadra não tiver, a <b>geral</b>.
+        </div>
+        <div style={{ color: "var(--muted)" }}>
+          O vídeo ocupa o espaço que sobra (1080 × 1320 com as duas faixas), com corte central da câmera.
+          Imagens de outro tamanho são encaixadas sem distorcer. Sem propaganda, o vídeo ocupa a tela toda.
+        </div>
+      </div>
+    </div>
+  );
+}
 
-const btnStyle: React.CSSProperties = {
-  background: "var(--accent)",
-  color: "var(--bg)",
-  border: "none",
-  padding: "10px 16px",
-  fontWeight: 700,
-  cursor: "pointer",
+const cardLink: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 12,
+  padding: 16,
+  border: "1px solid var(--line)",
+  background: "rgba(0,0,0,0.2)",
+  color: "inherit",
+  textDecoration: "none",
 };
 
 const layoutBox: React.CSSProperties = {
@@ -279,12 +178,4 @@ const mockBar: React.CSSProperties = {
   display: "grid",
   placeItems: "center",
   textAlign: "center",
-};
-
-const ghostBtn: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid var(--line)",
-  color: "var(--text)",
-  padding: "8px 12px",
-  cursor: "pointer",
 };

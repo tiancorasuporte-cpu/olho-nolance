@@ -96,6 +96,7 @@ class Ad(Base):
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
     venue_id: Mapped[Optional[int]] = mapped_column(ForeignKey("venues.id"), nullable=True, index=True)
+    camera_id: Mapped[Optional[int]] = mapped_column(ForeignKey("cameras.id"), nullable=True, index=True)
     duration_sec: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
     # "top" | "bottom" — faixa do vídeo vertical onde a imagem entra
     placement: Mapped[str] = mapped_column(String(10), nullable=False, default="bottom")

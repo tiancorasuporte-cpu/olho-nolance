@@ -1,17 +1,101 @@
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
-import { api, type Clip, type Venue } from "../lib/api";
+import { api, type Clip } from "../lib/api";
 import { isPlayer, useAuth } from "../lib/auth";
 
-export function HistoryPage() {
+function RetentionNotice() {
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings.get });
+  const days = settings.data?.clip_retention_days ?? 0;
+  if (days <= 0) return null;
+  return (
+    <span style={{ color: "var(--accent-2)" }}>
+      {" "}
+      Os lances ficam disponíveis por {days} {days === 1 ? "dia" : "dias"}.
+    </span>
+  );
+}
+
+export function LancesPage() {
   const { user } = useAuth();
   const player = isPlayer(user);
   const venues = useQuery({ queryKey: ["venues"], queryFn: api.venues.list });
-  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings.get });
-  const retentionDays = settings.data?.clip_retention_days ?? 0;
-  const [venueQuery, setVenueQuery] = useState("");
-  const [venueId, setVenueId] = useState<number | null>(null);
+  const cameras = useQuery({ queryKey: ["cameras"], queryFn: () => api.cameras.list(), enabled: !player });
+  const [query, setQuery] = useState("");
+  const all = venues.data || [];
+  const matches = all.filter((v) => matchesSearch(query, v.id, v.name, v.city, v.description));
+  const shown = matches.slice(0, 60);
+  const camCount = (venueId: number) => (cameras.data || []).filter((c) => c.venue_id === venueId).length;
+
+  return (
+    <div className="fade-up" style={{ display: "grid", gap: 20 }}>
+      <div>
+        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>LANCES</h1>
+        <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
+          {player
+            ? "Encontre sua quadra pelo nome ou cidade e abra para assistir e baixar os lances."
+            : "Escolha a quadra para ver os lances dela."}
+          <RetentionNotice />
+        </p>
+      </div>
+
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Digite o nome da quadra ou a cidade…"
+        count={{ shown: matches.length, total: all.length }}
+      />
+
+      <div style={{ display: "grid", gap: 10 }}>
+        {!player && !query && (
+          <Link to="/lances/$venueId" params={{ venueId: "todas" }} className="venue-card" style={cardLink}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>Todas as quadras</div>
+              <div style={{ color: "var(--muted)", fontSize: 14 }}>Últimos lances de todas as quadras</div>
+            </div>
+            <span style={{ color: "var(--accent)", fontWeight: 700 }}>Abrir →</span>
+          </Link>
+        )}
+        {venues.isLoading && <div style={{ color: "var(--muted)" }}>Carregando…</div>}
+        {!venues.isLoading && matches.length === 0 && (
+          <div style={{ color: "var(--muted)" }}>Nenhuma quadra encontrada.</div>
+        )}
+        {shown.map((v) => (
+          <Link
+            key={v.id}
+            to="/lances/$venueId"
+            params={{ venueId: String(v.id) }}
+            className="venue-card"
+            style={cardLink}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>
+                {v.name}
+                {v.city && <span style={{ color: "var(--accent)", fontWeight: 600 }}> · {v.city}</span>}
+              </div>
+              {!player && (
+                <div style={{ color: "var(--muted)", fontSize: 14 }}>
+                  {camCount(v.id)} {camCount(v.id) === 1 ? "câmera" : "câmeras"}
+                </div>
+              )}
+            </div>
+            <span style={{ color: "var(--accent)", fontWeight: 700 }}>Ver lances →</span>
+          </Link>
+        ))}
+        {matches.length > shown.length && (
+          <div style={{ color: "var(--muted)" }}>+{matches.length - shown.length} quadras. Refine a busca.</div>
+        )}
+      </div>
+      <style>{`.venue-card:hover { border-color: var(--accent) !important; }`}</style>
+    </div>
+  );
+}
+
+export function LancesVenuePage({ venueId }: { venueId: number | null }) {
+  const { user } = useAuth();
+  const player = isPlayer(user);
+  const venues = useQuery({ queryKey: ["venues"], queryFn: api.venues.list });
   const [cameraId, setCameraId] = useState("");
   const [status, setStatus] = useState("");
   const [source, setSource] = useState("");
@@ -20,12 +104,7 @@ export function HistoryPage() {
   const [clipQuery, setClipQuery] = useState("");
   const [preview, setPreview] = useState<Clip | null>(null);
 
-  const venueList = venues.data || [];
-  const selectedVenue = venueList.find((v) => v.id === venueId) || null;
-  const venueMatches = useMemo(
-    () => venueList.filter((v) => matchesSearch(venueQuery, v.name, v.city, v.description)),
-    [venueList, venueQuery],
-  );
+  const selectedVenue = venues.data?.find((v) => v.id === venueId) || null;
 
   const params = useMemo(
     () => ({
@@ -57,80 +136,29 @@ export function HistoryPage() {
     matchesSearch(clipQuery, c.id, c.camera_name, c.venue_name, c.source, c.status),
   );
 
-  function selectVenue(v: Venue | null) {
-    setVenueId(v?.id ?? null);
-    setCameraId("");
-    setPreview(null);
-  }
+  const title =
+    venueId == null ? "Todas as quadras" : selectedVenue?.name || (venues.isLoading ? "…" : `Quadra #${venueId}`);
 
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>HISTÓRICO</h1>
-        <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
-          {player
-            ? "Encontre sua quadra pelo nome ou cidade, assista ao lance e baixe."
-            : "Busque a quadra por nome ou cidade e filtre os lances."}
-          {retentionDays > 0 && (
-            <>
-              {" "}
-              <span style={{ color: "var(--accent-2)" }}>
-                Os lances ficam disponíveis por {retentionDays} {retentionDays === 1 ? "dia" : "dias"}.
-              </span>
-            </>
-          )}
+      <div style={{ display: "grid", gap: 8 }}>
+        <Link to="/lances" style={{ color: "var(--muted)", fontSize: 14 }}>
+          ← Lances · todas as quadras
+        </Link>
+        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)", textTransform: "uppercase" }}>{title}</h1>
+        <p style={{ margin: 0, color: "var(--muted)" }}>
+          {selectedVenue?.city ? `${selectedVenue.city} · ` : ""}
+          Assista, baixe e compartilhe os lances.
+          <RetentionNotice />
         </p>
       </div>
 
-      <section
-        style={{
-          display: "grid",
-          gap: 12,
-          padding: 16,
-          border: "1px solid var(--line)",
-          background: "rgba(26,26,26,0.7)",
-        }}
-      >
-        <div style={{ fontWeight: 700 }}>1. Escolha a quadra</div>
-        <SearchInput
-          value={venueQuery}
-          onChange={setVenueQuery}
-          placeholder="Digite o nome da quadra ou a cidade…"
-          count={{ shown: venueMatches.length, total: venueList.length }}
-        />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {!player && (
-            <VenueChip active={venueId == null} onClick={() => selectVenue(null)}>
-              Todas as quadras
-            </VenueChip>
-          )}
-          {venueMatches.slice(0, 30).map((v) => (
-            <VenueChip key={v.id} active={venueId === v.id} onClick={() => selectVenue(v)}>
-              {v.name}
-              {v.city && <span style={{ opacity: 0.75, fontWeight: 400 }}> · {v.city}</span>}
-            </VenueChip>
-          ))}
-          {venueMatches.length === 0 && (
-            <span style={{ color: "var(--muted)" }}>Nenhuma quadra encontrada.</span>
-          )}
-          {venueMatches.length > 30 && (
-            <span style={{ color: "var(--muted)", alignSelf: "center" }}>
-              +{venueMatches.length - 30} quadras — refine a busca
-            </span>
-          )}
-        </div>
-      </section>
-
       {player && venueId == null ? (
-        <div
-          style={{
-            padding: 32,
-            textAlign: "center",
-            color: "var(--muted)",
-            border: "1px dashed var(--line)",
-          }}
-        >
-          Selecione sua quadra acima para ver os lances.
+        <div style={{ padding: 32, textAlign: "center", color: "var(--muted)", border: "1px dashed var(--line)" }}>
+          <Link to="/lances" style={{ color: "var(--accent)" }}>
+            Escolha sua quadra
+          </Link>{" "}
+          para ver os lances.
         </div>
       ) : (
         <>
@@ -433,33 +461,6 @@ function downloadClip(id: number) {
     .catch((err: Error) => window.alert(`Falha ao baixar: ${err.message}`));
 }
 
-function VenueChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "8px 12px",
-        border: active ? "1px solid var(--accent)" : "1px solid var(--line)",
-        background: active ? "var(--accent)" : "transparent",
-        color: active ? "var(--bg)" : "var(--text)",
-        fontWeight: 600,
-        cursor: "pointer",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
   const color =
     status === "ready" ? "var(--accent-2)" : status === "failed" ? "var(--danger)" : "var(--warn)";
@@ -468,6 +469,19 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 const cell: React.CSSProperties = { padding: "12px 14px" };
+
+const cardLink: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
+  gap: 12,
+  padding: 16,
+  border: "1px solid var(--line)",
+  background: "rgba(0,0,0,0.2)",
+  color: "inherit",
+  textDecoration: "none",
+};
 
 const selectStyle: React.CSSProperties = {
   background: "rgba(0,0,0,0.25)",

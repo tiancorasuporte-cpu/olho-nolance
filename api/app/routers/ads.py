@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, get_user_from_bearer_or_query, require_roles
 from app.config import get_settings
 from app.db import get_db
-from app.models import Ad, User, Venue
+from app.models import Ad, Camera, User, Venue
 from app.schemas import AdOut, AdUpdate
 
 router = APIRouter(prefix="/ads", tags=["ads"])
@@ -23,6 +23,7 @@ def ad_to_out(ad: Ad) -> AdOut:
         title=ad.title,
         file_path=ad.file_path,
         venue_id=ad.venue_id,
+        camera_id=ad.camera_id,
         duration_sec=ad.duration_sec,
         placement=ad.placement or "bottom",
         sort_order=ad.sort_order,
@@ -55,11 +56,17 @@ async def create_ad(
     placement: str = Form("bottom"),
     sort_order: int = Form(0),
     venue_id: int | None = Form(None),
+    camera_id: int | None = Form(None),
     active: bool = Form(True),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     _: User = Depends(require_roles("admin", "superadmin")),
 ):
+    if camera_id is not None:
+        cam = db.get(Camera, camera_id)
+        if not cam:
+            raise HTTPException(status_code=400, detail="Camera not found")
+        venue_id = cam.venue_id
     if venue_id is not None and not db.get(Venue, venue_id):
         raise HTTPException(status_code=400, detail="Venue not found")
 
@@ -83,6 +90,7 @@ async def create_ad(
         title=title.strip() or "Propaganda",
         file_path=name,
         venue_id=venue_id,
+        camera_id=camera_id,
         duration_sec=max(3, min(duration_sec, 120)),
         placement=placement,
         sort_order=sort_order,
@@ -113,6 +121,7 @@ def update_ad(
             if not db.get(Venue, body.venue_id):
                 raise HTTPException(status_code=400, detail="Venue not found")
             ad.venue_id = body.venue_id
+        ad.camera_id = None
     if body.duration_sec is not None:
         ad.duration_sec = max(3, min(body.duration_sec, 120))
     if body.placement is not None:

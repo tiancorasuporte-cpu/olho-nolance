@@ -36,7 +36,7 @@ Na rede, use o IP do servidor (ex.: `http://192.168.0.10:3080`). O front detecta
 1. Entre na web e vá em **Quadras** → crie uma quadra.
 2. Abra a quadra → cadastre a câmera (`rtsp://...`) e aguarde status `streaming`.
 3. Em **Ao vivo** → selecione a câmera, veja o HLS e clique em **OLHO NO LANCE**.
-4. Em **Histórico** → baixe o MP4 quando status for `ready`.
+4. Em **Lances** → abra a quadra e baixe o MP4 quando status for `ready`.
 
 ### Botão físico (device token)
 

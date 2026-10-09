@@ -170,6 +170,7 @@ class AdOut(BaseModel):
     title: str
     file_path: str
     venue_id: Optional[int]
+    camera_id: Optional[int] = None
     duration_sec: int
     placement: str = "bottom"
     sort_order: int

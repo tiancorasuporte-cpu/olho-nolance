@@ -37,26 +37,39 @@ def _parse_dt(value: Any) -> Optional[datetime]:
 MAX_BOTTOM_ADS = 3
 
 
-def _ads_for_venue(db: Session, venue_id: int) -> dict[str, Any]:
-    """Active ads for the venue (or global): one top banner + up to 3 bottom sponsors."""
+def _ads_for_camera(db: Session, cam: Camera) -> dict[str, Any]:
+    """One top banner + up to 3 bottom sponsors. Each strip uses the most specific
+    level that has active ads: camera, then venue (all cameras), then global."""
     ads = (
         db.query(Ad)
         .filter(Ad.active.is_(True))
         .order_by(Ad.sort_order.asc(), Ad.id.desc())
         .all()
     )
-    top: Optional[str] = None
-    bottom: list[str] = []
+    levels: dict[int, dict[str, list[str]]] = {0: {}, 1: {}, 2: {}}
     for ad in ads:
-        if ad.venue_id is not None and ad.venue_id != venue_id:
-            continue
+        if ad.camera_id is not None:
+            if ad.camera_id != cam.id:
+                continue
+            level = 0
+        elif ad.venue_id is not None:
+            if ad.venue_id != cam.venue_id:
+                continue
+            level = 1
+        else:
+            level = 2
         if not (Path(settings.ads_path) / ad.file_path).is_file():
             continue
-        if (ad.placement or "bottom") == "top":
-            top = top or ad.file_path
-        elif len(bottom) < MAX_BOTTOM_ADS:
-            bottom.append(ad.file_path)
-    return {"top_image": top, "bottom_images": bottom}
+        levels[level].setdefault(ad.placement or "bottom", []).append(ad.file_path)
+
+    def pick(placement: str) -> list[str]:
+        for level in (0, 1, 2):
+            if levels[level].get(placement):
+                return levels[level][placement]
+        return []
+
+    top = pick("top")
+    return {"top_image": top[0] if top else None, "bottom_images": pick("bottom")[:MAX_BOTTOM_ADS]}
 
 
 def clip_to_out(clip: Clip) -> ClipOut:
@@ -158,7 +171,7 @@ async def _dispatch_clip(db: Session, clip: Clip, cam: Camera) -> None:
             clip_id=clip.id,
             duration_sec=clip.duration_sec,
             venue_id=cam.venue_id,
-            **_ads_for_venue(db, cam.venue_id),
+            **_ads_for_camera(db, cam),
         )
         error = None
     except Exception as exc:

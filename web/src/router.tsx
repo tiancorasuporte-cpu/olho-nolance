@@ -10,7 +10,8 @@ import { AuthProvider, useAuth } from "./lib/auth";
 import { Shell } from "./components/Shell";
 import { LoginPage } from "./pages/LoginPage";
 import { LivePage } from "./pages/LivePage";
-import { HistoryPage } from "./pages/HistoryPage";
+import { LancesPage, LancesVenuePage } from "./pages/LancesPage";
+import { AdsVenuePage } from "./pages/AdsVenuePage";
 import { VenuesPage } from "./pages/VenuesPage";
 import { VenueDetailPage } from "./pages/VenueDetailPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -30,7 +31,7 @@ const rootRoute = createRootRoute({
   component: RootComponent,
 });
 
-function Guarded({ children }: { children: React.ReactNode }) {
+function Guarded({ children, playerAllowed = false }: { children: React.ReactNode; playerAllowed?: boolean }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
@@ -42,14 +43,18 @@ function Guarded({ children }: { children: React.ReactNode }) {
   if (!user) {
     return <LoginPage />;
   }
-  if (user.role === "player") {
+  if (user.role === "player" && !playerAllowed) {
     return (
       <Shell>
-        <HistoryPage />
+        <LancesPage />
       </Shell>
     );
   }
   return <Shell>{children}</Shell>;
+}
+
+function PlayerGuarded({ children }: { children: React.ReactNode }) {
+  return <Guarded playerAllowed>{children}</Guarded>;
 }
 
 const indexRoute = createRoute({
@@ -65,11 +70,46 @@ const indexRoute = createRoute({
 const historicoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/historico",
+  beforeLoad: () => {
+    throw redirect({ to: "/lances" });
+  },
+});
+
+const lancesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/lances",
   component: () => (
-    <Guarded>
-      <HistoryPage />
-    </Guarded>
+    <PlayerGuarded>
+      <LancesPage />
+    </PlayerGuarded>
   ),
+});
+
+const lancesVenueRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/lances/$venueId",
+  component: function LancesVenue() {
+    const { venueId } = lancesVenueRoute.useParams();
+    const id = venueId === "todas" ? null : Number(venueId);
+    return (
+      <PlayerGuarded>
+        <LancesVenuePage key={venueId} venueId={id} />
+      </PlayerGuarded>
+    );
+  },
+});
+
+const propagandaVenueRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/propaganda/$venueId",
+  component: function PropagandaVenue() {
+    const { venueId } = propagandaVenueRoute.useParams();
+    return (
+      <Guarded>
+        <AdsVenuePage venueId={Number(venueId)} />
+      </Guarded>
+    );
+  },
 });
 
 const quadrasRoute = createRoute({
@@ -163,6 +203,8 @@ const loginRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   historicoRoute,
+  lancesRoute,
+  lancesVenueRoute,
   quadrasRoute,
   quadraDetailRoute,
   camerasRoute,
@@ -170,6 +212,7 @@ const routeTree = rootRoute.addChildren([
   devicesRoute,
   botaoPcRoute,
   propagandaRoute,
+  propagandaVenueRoute,
   configuracoesRoute,
   loginRoute,
 ]);

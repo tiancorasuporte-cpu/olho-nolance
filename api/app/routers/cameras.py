@@ -5,7 +5,7 @@ from app.auth import get_current_user, user_can_access_venue
 from app.config import get_settings
 from app.db import get_db
 from app.media_client import media_client
-from app.models import Camera, User, Venue
+from app.models import Ad, Camera, User, Venue
 from app.schemas import CameraCreate, CameraOut, CameraUpdate
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
@@ -207,6 +207,9 @@ async def delete_camera(
         await media_client.stop_stream(cam.id)
     except Exception:
         pass
+    db.query(Ad).filter(Ad.camera_id == cam.id).update(
+        {Ad.camera_id: None, Ad.active: False}, synchronize_session=False
+    )
     db.delete(cam)
     db.commit()
     return {"ok": True}

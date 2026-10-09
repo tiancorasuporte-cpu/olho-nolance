@@ -6,7 +6,7 @@ import { isAdmin, isPlayer, useAuth } from "../lib/auth";
 const links = [
   { to: "/", label: "Ao vivo" },
   { to: "/botao-pc", label: "Botão PC" },
-  { to: "/historico", label: "Histórico" },
+  { to: "/lances", label: "Lances" },
   { to: "/quadras", label: "Quadras" },
   { to: "/usuarios", label: "Usuários", admin: true },
   { to: "/propaganda", label: "Propaganda", admin: true },
@@ -21,7 +21,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => setMenuOpen(false), [pathname]);
 
   const visibleLinks = links.filter((l) =>
-    isPlayer(user) ? l.to === "/historico" : !l.admin || isAdmin(user),
+    isPlayer(user) ? l.to === "/lances" : !l.admin || isAdmin(user),
   );
 
   return (
@@ -55,7 +55,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               const active =
                 pathname === l.to ||
                 (l.to !== "/" && pathname.startsWith(`${l.to}/`)) ||
-                (isPlayer(user) && l.to === "/historico");
+                (isPlayer(user) && l.to === "/lances");
               return (
                 <Link key={l.to} to={l.to} className={`app-nav-link${active ? " active" : ""}`}>
                   {l.label}

@@ -61,7 +61,7 @@ export function UsersPage() {
       <div>
         <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>USUÁRIOS</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
-          Operador aciona lances nas quadras liberadas. Participante só acessa o Histórico: busca
+          Operador aciona lances nas quadras liberadas. Participante só acessa os Lances: busca
           a quadra pelo nome ou cidade, assiste e baixa os lances.
         </p>
       </div>
