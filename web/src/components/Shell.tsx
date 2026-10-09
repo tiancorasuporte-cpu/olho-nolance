@@ -38,16 +38,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header className="app-header">
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <img
-            src="/logo-icon.png"
-            alt="ONL Sports"
-            style={{ width: 44, height: 44, borderRadius: 10, display: "block" }}
-          />
-          <span className="brand" style={{ fontSize: 26, lineHeight: 1 }}>
-            <span style={{ color: "var(--text)" }}>ONL</span>{" "}
-            <span style={{ color: "var(--accent)" }}>SPORTS</span>
-          </span>
+        <Link to="/" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+          <img src="/logo.png" alt="ONL Sports" style={{ height: 48, width: "auto", display: "block" }} />
         </Link>
 
         <button
