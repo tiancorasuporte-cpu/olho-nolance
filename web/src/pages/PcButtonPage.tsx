@@ -136,7 +136,7 @@ export function PcButtonPage() {
     <div className="fade-up" style={{ display: "grid", gap: 16, minHeight: "70vh" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>BOTÃO PC</h1>
+          <h1 className="page-title">Botão PC</h1>
           <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
             Em cada câmera, clique em <strong style={{ color: "var(--accent)" }}>Tecla USB</strong> e
             aperte o botão físico. Cada USB fica ligado a uma câmera.
@@ -181,7 +181,7 @@ export function PcButtonPage() {
             style={{
               padding: "10px 14px",
               border: "1px solid var(--line)",
-              background: "rgba(0,0,0,0.25)",
+              background: "var(--field)", borderRadius: "var(--radius-sm)",
               fontSize: 14,
               flex: 1,
               minWidth: 180,
@@ -312,7 +312,7 @@ export function PcButtonPage() {
 }
 
 const selectStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

@@ -36,7 +36,7 @@ export function LoginPage() {
         style={{
           width: "min(420px, 100%)",
           padding: 32,
-          background: "rgba(20, 20, 20, 0.88)",
+          background: "var(--card)", borderRadius: "var(--radius)",
           border: "1px solid var(--line)",
           display: "grid",
           gap: 16,
@@ -46,7 +46,7 @@ export function LoginPage() {
           <img
             src="/logo.png"
             alt="ONL Sports · Olho no Lance"
-            style={{ width: "100%", maxWidth: 340, display: "block", margin: "0 auto" }}
+            style={{ width: "100%", maxWidth: 340, display: "block", margin: "0 auto", borderRadius: "var(--radius-sm)" }}
           />
           <p style={{ margin: "8px 0 0", color: "var(--muted)" }}>
             Play · Registra · Compartilha
@@ -91,7 +91,7 @@ export function LoginPage() {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

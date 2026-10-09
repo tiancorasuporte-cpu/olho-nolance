@@ -43,7 +43,7 @@ export function VenueDetailPage({ venueId }: { venueId: number }) {
         ) : (
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
             <div>
-              <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)", textTransform: "uppercase" }}>
+              <h1 className="page-title">
                 {venue.name}
               </h1>
               <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
@@ -217,7 +217,7 @@ function CameraCard({
         gap: 16,
         padding: 16,
         border: "1px solid var(--line)",
-        background: "rgba(0,0,0,0.2)",
+        background: "var(--card-2)", borderRadius: "var(--radius-sm)",
       }}
     >
       <CameraPreview camera={camera} live={live} onToggleLive={onToggleLive} />
@@ -339,7 +339,7 @@ export function DeviceList({ devices, compact = false }: { devices: Device[]; co
             flexWrap: "wrap",
             padding: compact ? "8px 10px" : 12,
             border: "1px solid var(--line)",
-            background: "rgba(0,0,0,0.2)",
+            background: "var(--card-2)", borderRadius: "var(--radius-sm)",
           }}
         >
           <div style={{ minWidth: 0 }}>
@@ -393,11 +393,11 @@ const formBox: React.CSSProperties = {
   gap: 10,
   padding: 16,
   border: "1px solid var(--line)",
-  background: "rgba(26,26,26,0.7)",
+  background: "var(--card)", borderRadius: "var(--radius)",
 };
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

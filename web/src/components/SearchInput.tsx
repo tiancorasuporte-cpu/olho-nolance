@@ -29,7 +29,7 @@ export function SearchInput({ value, onChange, placeholder = "Buscar…", count 
           placeholder={placeholder}
           style={{
             width: "100%",
-            background: "rgba(0,0,0,0.25)",
+            background: "var(--field)", borderRadius: "var(--radius-sm)",
             border: "1px solid var(--line)",
             color: "var(--text)",
             padding: "10px 12px 10px 32px",

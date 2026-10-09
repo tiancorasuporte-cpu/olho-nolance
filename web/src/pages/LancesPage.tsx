@@ -31,7 +31,7 @@ export function LancesPage() {
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>LANCES</h1>
+        <h1 className="page-title">Lances</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
           {player
             ? "Encontre sua quadra pelo nome ou cidade e abra para assistir e baixar os lances."
@@ -145,7 +145,7 @@ export function LancesVenuePage({ venueId }: { venueId: number | null }) {
         <Link to="/lances" style={{ color: "var(--muted)", fontSize: 14 }}>
           ← Lances · todas as quadras
         </Link>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)", textTransform: "uppercase" }}>{title}</h1>
+        <h1 className="page-title">{title}</h1>
         <p style={{ margin: 0, color: "var(--muted)" }}>
           {selectedVenue?.city ? `${selectedVenue.city} · ` : ""}
           Assista, baixe e compartilhe os lances.
@@ -238,7 +238,7 @@ export function LancesVenuePage({ venueId }: { venueId: number | null }) {
                     gap: 10,
                     padding: 14,
                     border: preview?.id === c.id ? "1px solid var(--accent)" : "1px solid var(--line)",
-                    background: "rgba(0,0,0,0.3)",
+                    background: "var(--card-2)", borderRadius: "var(--radius-sm)",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -272,10 +272,19 @@ export function LancesVenuePage({ venueId }: { venueId: number | null }) {
             </div>
           </div>
 
-          <div className="only-desktop" style={{ overflowX: "auto", border: "1px solid var(--line)" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <div
+            className="only-desktop"
+            style={{
+              overflowX: "auto",
+              border: "1px solid var(--line)",
+              background: "var(--card)",
+              borderRadius: "var(--radius)",
+              padding: "8px 16px",
+            }}
+          >
+            <table className="clip-table" style={{ width: "100%", fontSize: 14 }}>
               <thead>
-                <tr style={{ background: "rgba(0,0,0,0.25)", textAlign: "left" }}>
+                <tr style={{ textAlign: "left" }}>
                   {["Lance", "Quando", "Quadra", "Câmera", ...(player ? [] : ["Origem", "Status"]), "Ações"].map(
                     (h) => (
                       <th key={h} style={{ padding: "12px 14px", color: "var(--muted)", fontWeight: 600 }}>
@@ -287,13 +296,7 @@ export function LancesVenuePage({ venueId }: { venueId: number | null }) {
               </thead>
               <tbody>
                 {visibleClips.map((c) => (
-                  <tr
-                    key={c.id}
-                    style={{
-                      borderTop: "1px solid var(--line)",
-                      background: preview?.id === c.id ? "rgba(255,107,0,0.08)" : undefined,
-                    }}
-                  >
+                  <tr key={c.id} data-active={preview?.id === c.id}>
                     <td style={cell}>#{c.id}</td>
                     <td style={cell}>{new Date(c.created_at).toLocaleString()}</td>
                     <td style={cell}>{c.venue_name || `#${c.venue_id}`}</td>
@@ -478,13 +481,13 @@ const cardLink: React.CSSProperties = {
   gap: 12,
   padding: 16,
   border: "1px solid var(--line)",
-  background: "rgba(0,0,0,0.2)",
+  background: "var(--card-2)", borderRadius: "var(--radius-sm)",
   color: "inherit",
   textDecoration: "none",
 };
 
 const selectStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

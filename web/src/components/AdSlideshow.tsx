@@ -59,7 +59,7 @@ export function AdSlideshow({
           display: "grid",
           placeItems: "center",
           color: "var(--muted)",
-          background: "rgba(0,0,0,0.2)",
+          background: "var(--card-2)", borderRadius: "var(--radius-sm)",
           fontSize: 14,
         }}
       >

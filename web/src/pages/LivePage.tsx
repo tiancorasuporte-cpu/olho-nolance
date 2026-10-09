@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CameraPreview } from "../components/CameraPreview";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
+import { StatCard } from "../components/StatCard";
 import {
   cameraIdForHotkey,
   loadCameraHotkeys,
@@ -14,6 +15,15 @@ export function LivePage() {
   const qc = useQueryClient();
   const venues = useQuery({ queryKey: ["venues"], queryFn: api.venues.list });
   const cameras = useQuery({ queryKey: ["cameras"], queryFn: () => api.cameras.list() });
+  const todayClips = useQuery({
+    queryKey: ["clips", "today"],
+    queryFn: () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return api.clips.list({ from: start.toISOString(), limit: 500 });
+    },
+    refetchInterval: 30_000,
+  });
   const [venueId, setVenueId] = useState<number | "all">("all");
   const [focusId, setFocusId] = useState<number | null>(null);
   const [liveId, setLiveId] = useState<number | null>(null);
@@ -106,7 +116,7 @@ export function LivePage() {
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>AO VIVO</h1>
+          <h1 className="page-title">Ao vivo</h1>
           <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
             Clique na imagem para ver ao vivo e em <strong>OLHO NO LANCE</strong> para gravar. Configure um
             botão USB por câmera em{" "}
@@ -120,14 +130,26 @@ export function LivePage() {
           to="/botao-pc"
           style={{
             alignSelf: "center",
-            padding: "10px 14px",
-            border: "1px solid var(--accent)",
+            padding: "10px 16px",
+            background: "var(--accent-soft)",
+            borderRadius: "var(--radius-sm)",
             color: "var(--accent)",
-            fontWeight: 700,
+            fontWeight: 600,
           }}
         >
           Teclas USB →
         </Link>
+      </div>
+
+      <div className="stat-grid">
+        <StatCard icon="venue" label="Quadras" value={venues.data?.length ?? "—"} />
+        <StatCard icon="camera" label="Câmeras" value={cameras.data?.length ?? "—"} />
+        <StatCard
+          icon="online"
+          label="Câmeras online"
+          value={cameras.data ? cameras.data.filter((c) => c.status === "streaming").length : "—"}
+        />
+        <StatCard icon="play" label="Lances hoje" value={todayClips.data?.length ?? "—"} accent />
       </div>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -154,7 +176,7 @@ export function LivePage() {
             style={{
               padding: "10px 14px",
               border: "1px solid var(--line)",
-              background: "rgba(0,0,0,0.25)",
+              background: "var(--field)", borderRadius: "var(--radius-sm)",
               fontSize: 14,
               flex: 1,
               minWidth: 200,
@@ -181,7 +203,8 @@ export function LivePage() {
                 style={{
                   display: "grid",
                   border: isFocus ? "2px solid var(--accent)" : "1px solid var(--line)",
-                  background: "rgba(0,0,0,0.35)",
+                  background: "var(--card)",
+                  borderRadius: "var(--radius)",
                   overflow: "hidden",
                   opacity: busy ? 0.85 : 1,
                   animation: busy ? "pulse-glow 1.2s ease infinite" : undefined,
@@ -214,7 +237,7 @@ export function LivePage() {
                     alignItems: "center",
                     gap: 12,
                     padding: "14px 16px",
-                    background: busy ? "var(--accent)" : "rgba(20,20,20,0.95)",
+                    background: busy ? "var(--accent)" : "var(--card)",
                     color: busy ? "var(--bg)" : "var(--text)",
                   }}
                 >
@@ -247,7 +270,7 @@ export function LivePage() {
 }
 
 const selectStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

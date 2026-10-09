@@ -27,7 +27,7 @@ export function AdsPage() {
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>PROPAGANDA</h1>
+        <h1 className="page-title">Propaganda</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
           Os lances saem no formato de celular (1080×1920, 9:16), prontos para Stories do
           Instagram e Status do WhatsApp. As imagens ativas são gravadas nas faixas do vídeo.
@@ -148,7 +148,7 @@ const cardLink: React.CSSProperties = {
   gap: 12,
   padding: 16,
   border: "1px solid var(--line)",
-  background: "rgba(0,0,0,0.2)",
+  background: "var(--card-2)", borderRadius: "var(--radius-sm)",
   color: "inherit",
   textDecoration: "none",
 };
@@ -159,7 +159,7 @@ const layoutBox: React.CSSProperties = {
   gap: 20,
   padding: 16,
   border: "1px solid var(--line)",
-  background: "rgba(26,26,26,0.7)",
+  background: "var(--card)", borderRadius: "var(--radius)",
 };
 
 const phoneMock: React.CSSProperties = {

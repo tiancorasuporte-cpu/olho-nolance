@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
+import { StatCard } from "../components/StatCard";
 import { DeviceList } from "./VenueDetailPage";
 import { api } from "../lib/api";
 import { isAdmin, isGlobalAdmin, useAuth } from "../lib/auth";
@@ -49,12 +50,24 @@ export function VenuesPage() {
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>QUADRAS</h1>
+        <h1 className="page-title">Quadras</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
           {isGlobalAdmin(user)
             ? "Cadastre a quadra e abra-a para gerenciar as câmeras e os botões de cada câmera."
             : "Suas quadras. Abra uma para gerenciar as câmeras e os botões de cada câmera."}
         </p>
+      </div>
+
+      <div className="stat-grid">
+        <StatCard icon="venue" label="Quadras" value={all.length} />
+        <StatCard icon="camera" label="Câmeras" value={allCams.length} />
+        <StatCard
+          icon="online"
+          label="Câmeras online"
+          value={allCams.filter((c) => c.status === "streaming").length}
+          accent
+        />
+        {isAdmin(user) && <StatCard icon="button" label="Botões" value={allDevices.length} />}
       </div>
 
       {isGlobalAdmin(user) && (
@@ -69,7 +82,7 @@ export function VenuesPage() {
             gridTemplateColumns: "1fr 1fr 1fr auto",
             padding: 16,
             border: "1px solid var(--line)",
-            background: "rgba(26,26,26,0.7)",
+            background: "var(--card)", borderRadius: "var(--radius)",
           }}
           className="m-stack"
         >
@@ -125,7 +138,7 @@ export function VenuesPage() {
                 gap: 12,
                 padding: 16,
                 border: "1px solid var(--line)",
-                background: "rgba(0,0,0,0.2)",
+                background: "var(--card-2)", borderRadius: "var(--radius-sm)",
                 color: "inherit",
                 textDecoration: "none",
               }}
@@ -188,7 +201,7 @@ export function VenuesPage() {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

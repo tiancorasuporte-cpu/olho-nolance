@@ -42,7 +42,7 @@ export function SettingsPage() {
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>CONFIGURAÇÕES</h1>
+        <h1 className="page-title">Configurações</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>Regras gerais do sistema.</p>
       </div>
 
@@ -63,7 +63,7 @@ export function SettingsPage() {
           gap: 14,
           padding: 16,
           border: "1px solid var(--line)",
-          background: "rgba(26,26,26,0.7)",
+          background: "var(--card)", borderRadius: "var(--radius)",
           maxWidth: 640,
         }}
       >
@@ -130,7 +130,7 @@ export function SettingsPage() {
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "8px 10px",

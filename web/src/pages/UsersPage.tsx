@@ -52,7 +52,7 @@ export function UsersPage() {
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)" }}>USUÁRIOS</h1>
+        <h1 className="page-title">Usuários</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
           <b>Admin</b> vinculado a quadras gerencia só essas quadras: câmeras, botões, propagandas, lances e a
           equipe delas. {global && "Admin sem quadra é admin geral. "}
@@ -71,7 +71,7 @@ export function UsersPage() {
           gap: 10,
           padding: 16,
           border: "1px solid var(--line)",
-          background: "rgba(26,26,26,0.7)",
+          background: "var(--card)", borderRadius: "var(--radius)",
         }}
       >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }} className="user-form">
@@ -142,7 +142,7 @@ export function UsersPage() {
               gap: 12,
               padding: 16,
               border: editingId === u.id ? "1px solid var(--accent)" : "1px solid var(--line)",
-              background: "rgba(0,0,0,0.2)",
+              background: "var(--card-2)", borderRadius: "var(--radius-sm)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -377,7 +377,7 @@ function VenuePicker({
 }
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",

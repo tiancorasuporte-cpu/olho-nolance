@@ -40,7 +40,7 @@ export function AdsVenuePage({ venueId }: { venueId: number }) {
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
       <div style={{ display: "grid", gap: 8 }}>
         {back}
-        <h1 style={{ margin: 0, fontSize: 42, color: "var(--accent)", textTransform: "uppercase" }}>
+        <h1 className="page-title">
           {venue.name}
         </h1>
         <p style={{ margin: 0, color: "var(--muted)" }}>

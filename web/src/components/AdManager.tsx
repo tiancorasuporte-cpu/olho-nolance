@@ -96,7 +96,7 @@ export function AdList({ ads, emptyText }: { ads: Ad[]; emptyText: string }) {
             gap: 12,
             padding: 10,
             border: "1px solid var(--line)",
-            background: "rgba(0,0,0,0.2)",
+            background: "var(--card-2)", borderRadius: "var(--radius-sm)",
             alignItems: "center",
             opacity: ad.active ? 1 : 0.6,
           }}
@@ -146,11 +146,11 @@ export const adSectionBox: React.CSSProperties = {
   gap: 10,
   padding: 16,
   border: "1px solid var(--line)",
-  background: "rgba(26,26,26,0.7)",
+  background: "var(--card)", borderRadius: "var(--radius)",
 };
 
 const inputStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.25)",
+  background: "var(--field)", borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "10px 12px",
