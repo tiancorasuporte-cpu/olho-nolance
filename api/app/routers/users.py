@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.auth import (
@@ -11,6 +12,7 @@ from app.auth import (
     serialize_venue_ids,
 )
 from app.db import get_db
+from app.email_codes import normalize_email, validate_email
 from app.models import User, Venue
 from app.schemas import UserCreate, UserOut, UserUpdate
 from app.serializers import user_to_out
@@ -75,10 +77,27 @@ def create_user(
     current: User = Depends(require_roles("admin", "superadmin")),
 ):
     venue_ids = _check_assignment(db, current, body.role, body.venue_ids)
-    if db.query(User).filter(User.username == body.username).first():
-        raise HTTPException(status_code=400, detail="Username already exists")
+    email = None
+    if body.role == "superadmin":
+        username = body.username.strip()
+        if len(username) < 2:
+            raise HTTPException(status_code=400, detail="Informe o usuário")
+        if db.query(User).filter(User.username == username).first():
+            raise HTTPException(status_code=400, detail="Usuário já existe")
+        if body.email:
+            email = validate_email(body.email)
+            if db.query(User).filter(User.email == email).first():
+                raise HTTPException(status_code=400, detail="E-mail já cadastrado")
+    else:
+        # Everyone except superadmin logs in with e-mail
+        email = validate_email(body.email or body.username)
+        username = email[:64]
+        if db.query(User).filter(or_(User.email == email, User.username == username)).first():
+            raise HTTPException(status_code=400, detail="E-mail já cadastrado")
     user = User(
-        username=body.username,
+        username=username,
+        email=email,
+        email_verified=True if email else False,  # admin-created accounts skip confirmation
         password_hash=hash_password(body.password),
         name=body.name,
         role=body.role,
@@ -114,6 +133,19 @@ def update_user(
         user.name = body.name
     if body.password is not None:
         user.password_hash = hash_password(body.password)
+    if body.email is not None:
+        new_email = validate_email(body.email) if body.email.strip() else None
+        if new_email and db.query(User).filter(User.email == new_email, User.id != user.id).first():
+            raise HTTPException(status_code=400, detail="E-mail já cadastrado")
+        role_now = body.role or user.role
+        if role_now != "superadmin" and not new_email:
+            raise HTTPException(status_code=400, detail="Informe o e-mail (obrigatório para este perfil)")
+        changed = normalize_email(user.email or "") != (new_email or "")
+        user.email = new_email
+        if new_email and changed:
+            user.email_verified = True  # admin set it
+        if role_now != "superadmin" and new_email:
+            user.username = new_email[:64]
     if body.active is not None:
         user.active = body.active
     db.commit()

@@ -26,6 +26,13 @@ def ensure_schema() -> None:
             conn.exec_driver_sql("create index if not exists ix_clips_created_at on clips (created_at)")
         if not index_exists(conn, "ix_clips_status"):
             conn.exec_driver_sql("create index if not exists ix_clips_status on clips (status)")
+        if not column_exists(conn, "users", "email"):
+            conn.exec_driver_sql("alter table users add column email varchar(255)")
+            conn.exec_driver_sql("create unique index if not exists ix_users_email on users (email)")
+        if not column_exists(conn, "users", "email_verified"):
+            conn.exec_driver_sql(
+                "alter table users add column email_verified boolean not null default false"
+            )
 
     seed_superadmin()
 

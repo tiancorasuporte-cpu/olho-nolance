@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { SearchInput, matchesSearch } from "../components/SearchInput";
+import { SignupShare } from "../components/SignupShare";
 import { api, ROLE_LABELS, type Role, type User, type Venue } from "../lib/api";
 import { isAdmin, isGlobalAdmin, useAuth } from "../lib/auth";
 
 const VENUE_ROLES: Role[] = ["admin", "operator"];
+const EMAIL_ROLES: Role[] = ["player", "operator", "admin"];
 
 export function UsersPage() {
   const { user } = useAuth();
@@ -18,19 +20,45 @@ export function UsersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const allUsers = users.data || [];
   const visibleUsers = allUsers.filter((u) =>
-    matchesSearch(query, u.name, u.username, u.role, ROLE_LABELS[u.role], ...u.venue_ids.map(venueName)),
+    matchesSearch(
+      query,
+      u.name,
+      u.username,
+      u.email,
+      u.role,
+      ROLE_LABELS[u.role],
+      ...u.venue_ids.map(venueName),
+    ),
   );
 
   const roleOptions: Role[] = global
     ? ["player", "operator", "admin", ...(user?.role === "superadmin" ? (["superadmin"] as Role[]) : [])]
     : ["operator", "admin"];
 
-  const emptyForm = { username: "", password: "", name: "", role: "operator" as Role, venue_ids: [] as number[] };
+  const emptyForm = {
+    username: "",
+    password: "",
+    name: "",
+    email: "",
+    role: "operator" as Role,
+    venue_ids: [] as number[],
+  };
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
 
   const create = useMutation({
-    mutationFn: () => api.users.create(form),
+    mutationFn: () => {
+      const byEmail = EMAIL_ROLES.includes(form.role);
+      const email = (form.email || form.username).trim();
+      return api.users.create({
+        name: form.name,
+        password: form.password,
+        role: form.role,
+        venue_ids: form.venue_ids,
+        username: byEmail ? email : form.username,
+        email: byEmail ? email : form.email || undefined,
+      });
+    },
     onSuccess: () => {
       setForm(emptyForm);
       setError(null);
@@ -54,12 +82,13 @@ export function UsersPage() {
       <div>
         <h1 className="page-title">Usuários</h1>
         <p style={{ margin: "6px 0 0", color: "var(--muted)" }}>
-          <b>Admin</b> vinculado a quadras gerencia só essas quadras: câmeras, botões, propagandas, lances e a
-          equipe delas. {global && "Admin sem quadra é admin geral. "}
-          <b>Operador</b> aciona e assiste os lances das quadras dele.
-          {global && " Participante só acessa os Lances: busca a quadra, assiste e baixa."}
+          Todos entram por <b>e-mail</b> (exceto o superadmin). <b>Admin</b> vinculado a quadras gerencia só
+          essas quadras. <b>Operador</b> aciona e assiste os lances. Participante se cadastra pelo link/QR
+          abaixo ou aqui.
         </p>
       </div>
+
+      <SignupShare />
 
       <form
         onSubmit={(e) => {
@@ -82,14 +111,26 @@ export function UsersPage() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             style={inputStyle}
           />
-          <input
-            required
-            placeholder="Usuário (login)"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-            style={inputStyle}
-            autoComplete="off"
-          />
+          {EMAIL_ROLES.includes(form.role) ? (
+            <input
+              required
+              type="email"
+              placeholder="E-mail (login)"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value, username: e.target.value })}
+              style={inputStyle}
+              autoComplete="off"
+            />
+          ) : (
+            <input
+              required
+              placeholder="Usuário (só superadmin)"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              style={inputStyle}
+              autoComplete="off"
+            />
+          )}
           <input
             required
             type="password"
@@ -101,7 +142,7 @@ export function UsersPage() {
           />
           <select
             value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+            onChange={(e) => setForm({ ...form, role: e.target.value as Role, email: "", username: "" })}
             style={inputStyle}
           >
             {roleOptions.map((r) => (
@@ -148,12 +189,18 @@ export function UsersPage() {
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>
-                  {u.name} <span style={{ color: "var(--muted)" }}>@{u.username}</span>
+                  {u.name}{" "}
+                  <span style={{ color: "var(--muted)" }}>
+                    {u.email ? u.email : `@${u.username}`}
+                  </span>
                 </div>
                 <div style={{ color: "var(--muted)", fontSize: 13 }}>
                   {ROLE_LABELS[u.role] || u.role}
                   {u.role === "admin" && u.venue_ids.length === 0 && " geral"}
                   {u.venue_ids.length > 0 && ` · quadras: ${u.venue_ids.map(venueName).join(", ")}`}
+                  {u.email && !u.email_verified && (
+                    <span style={{ color: "var(--accent)" }}> · e-mail pendente</span>
+                  )}
                   {!u.active && <span style={{ color: "var(--danger)" }}> · inativo</span>}
                 </div>
               </div>
@@ -224,6 +271,7 @@ function UserEditor({
 }) {
   const qc = useQueryClient();
   const [name, setName] = useState(target.name);
+  const [email, setEmail] = useState(target.email || "");
   const [role, setRole] = useState<Role>(target.role);
   const [venueIds, setVenueIds] = useState<number[]>(target.venue_ids);
   const [active, setActive] = useState(target.active);
@@ -234,6 +282,7 @@ function UserEditor({
     mutationFn: () =>
       api.users.update(target.id, {
         name,
+        email: email.trim() || undefined,
         ...(self ? {} : { role, venue_ids: VENUE_ROLES.includes(role) ? venueIds : [], active }),
         ...(password ? { password } : {}),
       }),
@@ -256,6 +305,14 @@ function UserEditor({
     >
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }} className="user-form">
         <input required placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        <input
+          type="email"
+          placeholder={role === "superadmin" ? "E-mail (opcional)" : "E-mail (login)"}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={inputStyle}
+          required={role !== "superadmin"}
+        />
         <select
           value={role}
           onChange={(e) => setRole(e.target.value as Role)}

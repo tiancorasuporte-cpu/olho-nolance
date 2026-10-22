@@ -200,6 +200,15 @@ const loginRoute = createRoute({
   component: LoginPage,
 });
 
+const cadastroRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/cadastro",
+  beforeLoad: () => {
+    if (localStorage.getItem("token")) throw redirect({ to: "/lances" });
+  },
+  component: () => <LoginPage initialMode="register" />,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   historicoRoute,
@@ -215,6 +224,7 @@ const routeTree = rootRoute.addChildren([
   propagandaVenueRoute,
   configuracoesRoute,
   loginRoute,
+  cadastroRoute,
 ]);
 
 export const router = createRouter({ routeTree });

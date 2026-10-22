@@ -21,6 +21,8 @@ class UserOut(BaseModel):
     id: int
     username: str
     name: str
+    email: Optional[str] = None
+    email_verified: bool = False
     role: Role
     active: bool
     venue_ids: list[int] = []
@@ -31,10 +33,36 @@ class LoginIn(BaseModel):
     password: str
 
 
+class RegisterIn(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
+
+
+class ConfirmEmailIn(BaseModel):
+    email: str
+    code: str
+
+
+class ForgotPasswordIn(BaseModel):
+    email: str
+
+
+class ResetPasswordIn(BaseModel):
+    email: str
+    code: str
+    password: str = Field(min_length=6, max_length=128)
+
+
+class MessageOut(BaseModel):
+    message: str
+
+
 class UserCreate(BaseModel):
-    username: str = Field(min_length=2, max_length=64)
+    username: str = Field(default="", max_length=64)
     password: str = Field(min_length=4)
     name: str
+    email: Optional[str] = None
     role: Role = "operator"
     venue_ids: list[int] = []
     active: bool = True
@@ -43,6 +71,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     password: Optional[str] = None
+    email: Optional[str] = None
     role: Optional[Role] = None
     venue_ids: Optional[list[int]] = None
     active: Optional[bool] = None

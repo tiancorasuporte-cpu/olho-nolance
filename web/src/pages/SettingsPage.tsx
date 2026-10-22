@@ -1,17 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api, type EmailSettings } from "../lib/api";
 import { isGlobalAdmin, useAuth } from "../lib/auth";
 
 const PRESETS = [1, 3, 7, 15, 30, 90];
+
+const emptyEmail = {
+  host: "",
+  smtp_port: 587,
+  imap_port: 993,
+  username: "",
+  password: "",
+  from_email: "",
+  from_name: "ONL Sports",
+  use_ssl: false,
+};
 
 export function SettingsPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings.get });
+  const emailSettings = useQuery({
+    queryKey: ["settings", "email"],
+    queryFn: api.settings.getEmail,
+    enabled: isGlobalAdmin(user),
+  });
   const [days, setDays] = useState(3);
   const [keepForever, setKeepForever] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [emailForm, setEmailForm] = useState(emptyEmail);
+  const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [emailErr, setEmailErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!settings.data) return;
@@ -19,6 +38,21 @@ export function SettingsPage() {
     setKeepForever(current === 0);
     if (current > 0) setDays(current);
   }, [settings.data]);
+
+  useEffect(() => {
+    if (!emailSettings.data) return;
+    const e = emailSettings.data;
+    setEmailForm({
+      host: e.host,
+      smtp_port: e.smtp_port,
+      imap_port: e.imap_port,
+      username: e.username,
+      password: "",
+      from_email: e.from_email,
+      from_name: e.from_name || "ONL Sports",
+      use_ssl: e.use_ssl,
+    });
+  }, [emailSettings.data]);
 
   const save = useMutation({
     mutationFn: () => api.settings.update({ clip_retention_days: keepForever ? 0 : days }),
@@ -35,9 +69,53 @@ export function SettingsPage() {
     onError: (e: Error) => setMessage(e.message),
   });
 
+  const saveEmail = useMutation({
+    mutationFn: () => api.settings.updateEmail(emailForm),
+    onSuccess: (res: EmailSettings) => {
+      setEmailErr(null);
+      setEmailMsg(
+        res.configured
+          ? "E-mail salvo. Use os botões abaixo para testar IMAP (leitura) e SMTP (envio)."
+          : "Salvo, mas ainda faltam host, usuário ou senha.",
+      );
+      void qc.invalidateQueries({ queryKey: ["settings", "email"] });
+      setEmailForm((f) => ({ ...f, password: "" }));
+    },
+    onError: (e: Error) => {
+      setEmailMsg(null);
+      setEmailErr(e.message);
+    },
+  });
+
+  const testImap = useMutation({
+    mutationFn: api.settings.testImap,
+    onSuccess: (r) => {
+      setEmailErr(null);
+      setEmailMsg(r.message);
+    },
+    onError: (e: Error) => {
+      setEmailMsg(null);
+      setEmailErr(e.message);
+    },
+  });
+
+  const testSmtp = useMutation({
+    mutationFn: api.settings.testSmtp,
+    onSuccess: (r) => {
+      setEmailErr(null);
+      setEmailMsg(r.message);
+    },
+    onError: (e: Error) => {
+      setEmailMsg(null);
+      setEmailErr(e.message);
+    },
+  });
+
   if (!isGlobalAdmin(user)) {
     return <div style={{ color: "var(--muted)" }}>Acesso restrito a admins.</div>;
   }
+
+  const emailReady = emailSettings.data?.configured;
 
   return (
     <div className="fade-up" style={{ display: "grid", gap: 20 }}>
@@ -58,14 +136,7 @@ export function SettingsPage() {
             return;
           save.mutate();
         }}
-        style={{
-          display: "grid",
-          gap: 14,
-          padding: 16,
-          border: "1px solid var(--line)",
-          background: "var(--card)", borderRadius: "var(--radius)",
-          maxWidth: 640,
-        }}
+        style={cardStyle}
       >
         <div>
           <strong style={{ fontSize: 18 }}>Apagar lances automaticamente</strong>
@@ -125,12 +196,183 @@ export function SettingsPage() {
         </button>
         {message && <div style={{ color: save.isError ? "var(--danger)" : "var(--accent-2)" }}>{message}</div>}
       </form>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setEmailMsg(null);
+          setEmailErr(null);
+          saveEmail.mutate();
+        }}
+        style={cardStyle}
+      >
+        <div>
+          <strong style={{ fontSize: 18 }}>E-mail (IMAP / SMTP)</strong>
+          <div style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>
+            Usado para enviar o código de confirmação do participante e o código de “esqueci a senha”.
+            No painel do seu provedor costuma aparecer <b>IMAP</b> (ler) e <b>SMTP</b> (enviar) no mesmo
+            servidor — informe os dois. Status:{" "}
+            {emailReady ? (
+              <span style={{ color: "var(--accent-2)" }}>configurado</span>
+            ) : (
+              <span style={{ color: "var(--danger)" }}>ainda não configurado</span>
+            )}
+            .
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }} className="email-form">
+          <label style={labelStyle}>
+            Servidor (host)
+            <input
+              required
+              placeholder="mail.seudominio.com.br"
+              value={emailForm.host}
+              onChange={(e) => setEmailForm({ ...emailForm, host: e.target.value })}
+              style={inputStyle}
+            />
+          </label>
+          <label style={labelStyle}>
+            Porta SMTP
+            <input
+              type="number"
+              required
+              value={emailForm.smtp_port}
+              onChange={(e) => setEmailForm({ ...emailForm, smtp_port: Number(e.target.value) || 587 })}
+              style={inputStyle}
+            />
+          </label>
+          <label style={labelStyle}>
+            Porta IMAP
+            <input
+              type="number"
+              required
+              value={emailForm.imap_port}
+              onChange={(e) => setEmailForm({ ...emailForm, imap_port: Number(e.target.value) || 993 })}
+              style={inputStyle}
+            />
+          </label>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="email-form">
+          <label style={labelStyle}>
+            Usuário / e-mail da caixa
+            <input
+              required
+              type="email"
+              placeholder="noreply@seudominio.com.br"
+              value={emailForm.username}
+              onChange={(e) => setEmailForm({ ...emailForm, username: e.target.value })}
+              style={inputStyle}
+              autoComplete="off"
+            />
+          </label>
+          <label style={labelStyle}>
+            Senha {emailSettings.data?.password_set ? "(deixe vazio para manter)" : ""}
+            <input
+              type="password"
+              placeholder={emailSettings.data?.password_set ? "••••••••" : "Senha do e-mail"}
+              value={emailForm.password}
+              onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+              style={inputStyle}
+              autoComplete="new-password"
+              required={!emailSettings.data?.password_set}
+            />
+          </label>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="email-form">
+          <label style={labelStyle}>
+            Remetente (From)
+            <input
+              type="email"
+              placeholder="mesmo e-mail ou outro autorizado"
+              value={emailForm.from_email}
+              onChange={(e) => setEmailForm({ ...emailForm, from_email: e.target.value })}
+              style={inputStyle}
+            />
+          </label>
+          <label style={labelStyle}>
+            Nome do remetente
+            <input
+              value={emailForm.from_name}
+              onChange={(e) => setEmailForm({ ...emailForm, from_name: e.target.value })}
+              style={inputStyle}
+            />
+          </label>
+        </div>
+
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+          <input
+            type="checkbox"
+            checked={emailForm.use_ssl}
+            onChange={(e) => setEmailForm({ ...emailForm, use_ssl: e.target.checked })}
+          />
+          SMTP com SSL (porta 465). Desmarcado = STARTTLS (porta 587, o mais comum).
+        </label>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="submit" style={btnStyle} disabled={saveEmail.isPending}>
+            {saveEmail.isPending ? "Salvando…" : "Salvar e-mail"}
+          </button>
+          <button
+            type="button"
+            style={ghostBtn}
+            disabled={testImap.isPending || !emailForm.host}
+            onClick={() => {
+              setEmailMsg(null);
+              setEmailErr(null);
+              testImap.mutate();
+            }}
+          >
+            {testImap.isPending ? "Testando…" : "Testar IMAP"}
+          </button>
+          <button
+            type="button"
+            style={ghostBtn}
+            disabled={testSmtp.isPending || !emailForm.host}
+            onClick={() => {
+              setEmailMsg(null);
+              setEmailErr(null);
+              testSmtp.mutate();
+            }}
+          >
+            {testSmtp.isPending ? "Testando…" : "Testar SMTP"}
+          </button>
+        </div>
+        {emailMsg && <div style={{ color: "var(--accent-2)" }}>{emailMsg}</div>}
+        {emailErr && <div style={{ color: "var(--danger)" }}>{emailErr}</div>}
+      </form>
+
+      <style>{`
+        @media (max-width: 800px) {
+          .email-form { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
+const cardStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 14,
+  padding: 16,
+  border: "1px solid var(--line)",
+  background: "var(--card)",
+  borderRadius: "var(--radius)",
+  maxWidth: 720,
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "grid",
+  gap: 6,
+  fontSize: 13,
+  color: "var(--muted)",
+};
+
 const inputStyle: React.CSSProperties = {
-  background: "var(--field)", borderRadius: "var(--radius-sm)",
+  background: "var(--field)",
+  borderRadius: "var(--radius-sm)",
   border: "1px solid var(--line)",
   color: "var(--text)",
   padding: "8px 10px",
@@ -144,4 +386,13 @@ const btnStyle: React.CSSProperties = {
   fontWeight: 700,
   cursor: "pointer",
   justifySelf: "start",
+};
+
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--text)",
+  border: "1px solid var(--line)",
+  padding: "10px 14px",
+  cursor: "pointer",
+  fontWeight: 600,
 };

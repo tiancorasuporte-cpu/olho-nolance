@@ -31,6 +31,10 @@ Na rede, use o IP do servidor (ex.: `http://192.168.0.10:3080`). O front detecta
 
 **Login inicial:** o superadmin é criado na primeira subida com `SUPERADMIN_USER` / `SUPERADMIN_PASSWORD` do `.env`. Defina uma senha forte antes de expor o sistema na internet.
 
+**Login por e-mail:** admin, operador e participante entram com e-mail (só o superadmin usa o usuário do `.env`).
+Participantes se cadastram em `/cadastro` (há QR code e link em **Usuários**), confirmam o e-mail com código e
+podem usar “Esqueci a senha”. Configure o servidor em **Configurações → E-mail (IMAP/SMTP)**.
+
 ## Fluxo rápido de teste
 
 1. Entre na web e vá em **Quadras** → crie uma quadra.

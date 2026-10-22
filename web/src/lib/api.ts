@@ -26,6 +26,8 @@ export type User = {
   id: number;
   username: string;
   name: string;
+  email: string | null;
+  email_verified: boolean;
   role: Role;
   active: boolean;
   venue_ids: number[];
@@ -94,6 +96,18 @@ export type AppSettings = {
   clip_retention_days: number;
 };
 
+export type EmailSettings = {
+  host: string;
+  smtp_port: number;
+  imap_port: number;
+  username: string;
+  from_email: string;
+  from_name: string;
+  use_ssl: boolean;
+  configured: boolean;
+  password_set: boolean;
+};
+
 export type AdPlacement = "top" | "bottom";
 
 export const AD_PLACEMENT_LABELS: Record<AdPlacement, string> = {
@@ -149,6 +163,26 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ username, password }),
     }),
+  register: (body: { name: string; email: string; password: string }) =>
+    request<{ message: string }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  confirmEmail: (body: { email: string; code: string }) =>
+    request<{ access_token: string }>("/auth/confirm", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (body: { email: string; code: string; password: string }) =>
+    request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   me: () => request<User>("/auth/me"),
   venues: {
     list: () => request<Venue[]>("/venues"),
@@ -200,6 +234,7 @@ export const api = {
       username: string;
       password: string;
       name: string;
+      email?: string;
       role: Role;
       venue_ids?: number[];
     }) => request<User>("/users", { method: "POST", body: JSON.stringify(body) }),
@@ -221,6 +256,25 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(body),
       }),
+    getEmail: () => request<EmailSettings>("/settings/email"),
+    updateEmail: (body: {
+      host: string;
+      smtp_port: number;
+      imap_port: number;
+      username: string;
+      password?: string;
+      from_email: string;
+      from_name: string;
+      use_ssl: boolean;
+    }) =>
+      request<EmailSettings>("/settings/email", {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
+    testImap: () =>
+      request<{ message: string }>("/settings/email/test-imap", { method: "POST" }),
+    testSmtp: () =>
+      request<{ message: string }>("/settings/email/test-smtp", { method: "POST" }),
   },
   ads: {
     list: (params?: { active_only?: boolean; venue_id?: number }) => {
