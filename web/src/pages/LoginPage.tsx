@@ -174,14 +174,14 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
           {mode === "login" && (
             <>
               <label className="login-field">
-                <span>E-mail</span>
+                <span>E-mail ou usuário</span>
                 <input
-                  type="email"
+                  type="text"
                   inputMode="email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  placeholder="seu@email.com"
+                  placeholder="seu@email.com ou superadmin"
                   required
                   autoFocus
                 />
