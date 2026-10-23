@@ -44,9 +44,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
             alt="ONL Sports"
             style={{ width: 44, height: 44, borderRadius: 10, display: "block" }}
           />
-          <span className="brand" style={{ fontSize: 26, lineHeight: 1 }}>
-            <span style={{ color: "var(--text)" }}>ONL</span>{" "}
-            <span style={{ color: "var(--accent)" }}>SPORTS</span>
+          <span style={{ display: "grid", gap: 2, lineHeight: 1 }}>
+            <span className="brand" style={{ fontSize: 26 }}>
+              <span style={{ color: "var(--text)" }}>ONL</span>{" "}
+              <span style={{ color: "var(--accent)" }}>SPORTS</span>
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                color: "var(--muted)",
+              }}
+            >
+              De olho no Lance
+            </span>
           </span>
         </Link>
 
