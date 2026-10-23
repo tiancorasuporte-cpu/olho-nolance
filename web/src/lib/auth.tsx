@@ -12,8 +12,8 @@ import { api, type User } from "./api";
 type AuthState = {
   user: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  applyToken: (token: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<User>;
+  applyToken: (token: string) => Promise<User>;
   logout: () => void;
   refresh: () => Promise<void>;
 };
@@ -50,12 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", token);
     const me = await api.me();
     setUser(me);
+    setLoading(false);
+    return me;
   }, []);
 
   const login = useCallback(
     async (username: string, password: string) => {
       const { access_token } = await api.login(username, password);
-      await applyToken(access_token);
+      return applyToken(access_token);
     },
     [applyToken],
   );

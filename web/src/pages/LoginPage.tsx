@@ -1,12 +1,18 @@
-import { useState } from "react";
-import { api } from "../lib/api";
+import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { api, type User } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import "./LoginPage.css";
 
 type Mode = "login" | "register" | "confirm" | "forgot" | "reset";
 
+function homeFor(user: User): "/lances" | "/" {
+  return user.role === "player" ? "/lances" : "/";
+}
+
 export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
-  const { login, applyToken } = useAuth();
+  const { login, applyToken, user } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
@@ -17,6 +23,27 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [entering, setEntering] = useState(false);
+
+  // If already logged in (e.g. after confirm on /cadastro), leave this screen.
+  useEffect(() => {
+    if (!user || entering) return;
+    void navigate({ to: homeFor(user), replace: true });
+  }, [user, entering, navigate]);
+
+  async function goHome(me: User, message: string) {
+    setEntering(true);
+    setInfo(message);
+    setError(null);
+    try {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+    } catch {
+      /* ignore */
+    }
+    // Brief pause so mobile users see "confirmado" before navigation.
+    await new Promise((r) => window.setTimeout(r, 500));
+    await navigate({ to: homeFor(me), replace: true });
+  }
 
   function go(next: Mode) {
     setMode(next);
@@ -55,7 +82,8 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
     setInfo(null);
     try {
       if (mode === "login") {
-        await login(username.trim(), password);
+        const me = await login(username.trim(), password);
+        await goHome(me, "Login ok! Entrando…");
         return;
       }
       if (mode === "register") {
@@ -69,7 +97,8 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
       }
       if (mode === "confirm") {
         const { access_token } = await api.confirmEmail({ email, code });
-        await applyToken(access_token);
+        const me = await applyToken(access_token);
+        await goHome(me, "E-mail confirmado! Entrando…");
         return;
       }
       if (mode === "forgot") {
@@ -92,6 +121,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
         setInfo(res.message);
       }
     } catch (err) {
+      setEntering(false);
       setError(err instanceof Error ? err.message : "Falha na operação");
     } finally {
       setLoading(false);
@@ -105,6 +135,21 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
     forgot: "Esqueci a senha",
     reset: "Nova senha",
   };
+
+  if (entering) {
+    return (
+      <div className="login-root">
+        <main className="login-center">
+          <img src="/logo.png" alt="ONL Sports" className="login-logo" />
+          <div className="login-card" style={{ textAlign: "center", gap: 14 }}>
+            <div className="login-card-title">Pronto!</div>
+            <div className="login-info">{info || "Entrando…"}</div>
+            <div style={{ color: "var(--muted)", fontSize: 13 }}>Aguarde um instante…</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="login-root">
@@ -131,7 +176,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
               <label className="login-field">
                 <span>E-mail</span>
                 <input
-                  type="text"
+                  type="email"
                   inputMode="email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -204,7 +249,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                autoFocus={mode !== "reset"}
+                autoFocus={mode !== "reset" && mode !== "confirm"}
               />
             </label>
           )}
@@ -224,7 +269,8 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
                   maxLength={7}
                   placeholder="000000"
                   required
-                  autoFocus={mode === "confirm" || mode === "reset"}
+                  autoFocus
+                  enterKeyHint="done"
                 />
               </label>
             </>
@@ -260,7 +306,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
           {error && <div className="login-error">{error}</div>}
           {info && <div className="login-info">{info}</div>}
 
-          <button type="submit" disabled={loading} className="login-submit">
+          <button type="submit" disabled={loading || entering} className="login-submit">
             {loading
               ? "Aguarde…"
               : mode === "login"
