@@ -181,7 +181,7 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  placeholder="seu@email.com ou superadmin"
+                  placeholder="seu@email.com"
                   required
                   autoFocus
                 />
