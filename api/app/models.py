@@ -31,7 +31,9 @@ class EmailCode(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     purpose: Mapped[str] = mapped_column(String(32), nullable=False)  # register | reset
     code_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -84,7 +86,9 @@ class Clip(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     camera_id: Mapped[int] = mapped_column(ForeignKey("cameras.id"), nullable=False, index=True)
     venue_id: Mapped[int] = mapped_column(ForeignKey("venues.id"), nullable=False, index=True)
-    triggered_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    triggered_by_user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     triggered_by_device_id: Mapped[Optional[int]] = mapped_column(ForeignKey("devices.id"), nullable=True)
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="web")
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

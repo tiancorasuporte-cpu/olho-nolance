@@ -33,6 +33,42 @@ def ensure_schema() -> None:
             conn.exec_driver_sql(
                 "alter table users add column email_verified boolean not null default false"
             )
+        # Allow deleting users that still have email_codes rows
+        conn.exec_driver_sql(
+            """
+            do $$
+            begin
+              if exists (
+                select 1 from pg_constraint where conname = 'email_codes_user_id_fkey'
+              ) then
+                alter table email_codes drop constraint email_codes_user_id_fkey;
+              end if;
+              alter table email_codes
+                add constraint email_codes_user_id_fkey
+                foreign key (user_id) references users(id) on delete cascade;
+            exception when duplicate_object then
+              null;
+            end $$;
+            """
+        )
+        # Keep clip history if the user is removed
+        conn.exec_driver_sql(
+            """
+            do $$
+            begin
+              if exists (
+                select 1 from pg_constraint where conname = 'clips_triggered_by_user_id_fkey'
+              ) then
+                alter table clips drop constraint clips_triggered_by_user_id_fkey;
+              end if;
+              alter table clips
+                add constraint clips_triggered_by_user_id_fkey
+                foreign key (triggered_by_user_id) references users(id) on delete set null;
+            exception when duplicate_object then
+              null;
+            end $$;
+            """
+        )
 
     seed_superadmin()
 

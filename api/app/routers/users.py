@@ -13,7 +13,7 @@ from app.auth import (
 )
 from app.db import get_db
 from app.email_codes import normalize_email, validate_email
-from app.models import User, Venue
+from app.models import Clip, EmailCode, User, Venue
 from app.schemas import UserCreate, UserOut, UserUpdate
 from app.serializers import user_to_out
 
@@ -161,9 +161,15 @@ def delete_user(
 ):
     user = _visible_user(db, current, user_id)
     if user.id == current.id:
-        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+        raise HTTPException(status_code=400, detail="Você não pode excluir a si mesmo")
     if user.role == "superadmin" and current.role != "superadmin":
         raise HTTPException(status_code=403, detail="Forbidden")
+    # Clear FKs that would block delete (codes, clip authorship).
+    db.query(EmailCode).filter(EmailCode.user_id == user.id).delete(synchronize_session=False)
+    db.query(Clip).filter(Clip.triggered_by_user_id == user.id).update(
+        {Clip.triggered_by_user_id: None},
+        synchronize_session=False,
+    )
     db.delete(user)
     db.commit()
     return {"ok": True}
