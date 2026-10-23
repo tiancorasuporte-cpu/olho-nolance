@@ -12,6 +12,7 @@ from app.schemas import (
     LoginIn,
     MessageOut,
     RegisterIn,
+    ResendCodeIn,
     ResetPasswordIn,
     TokenOut,
     UserOut,
@@ -86,8 +87,19 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
 @router.post("/confirm", response_model=TokenOut)
 def confirm_email(body: ConfirmEmailIn, db: Session = Depends(get_db)):
     email = validate_email(body.email)
-    row = verify_code(db, email, "register", body.code)
-    user = db.get(User, row.user_id) if row.user_id else db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == email).first()
+    try:
+        row = verify_code(db, email, "register", body.code)
+    except HTTPException:
+        if user and user.email_verified:
+            raise HTTPException(
+                status_code=400,
+                detail="Este e-mail já está confirmado. Volte e entre com seu e-mail e senha.",
+            ) from None
+        raise
+    user = db.get(User, row.user_id) if row.user_id else user
+    if not user:
+        user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     user.email_verified = True
@@ -96,6 +108,30 @@ def confirm_email(body: ConfirmEmailIn, db: Session = Depends(get_db)):
         user.email = email
     db.commit()
     return TokenOut(access_token=create_access_token(user.id, user.role))
+
+
+@router.post("/resend-code", response_model=MessageOut)
+def resend_code(body: ResendCodeIn, db: Session = Depends(get_db)):
+    email = validate_email(body.email)
+    purpose = body.purpose if body.purpose in ("register", "reset") else "register"
+    user = db.query(User).filter(User.email == email).first()
+    if purpose == "register":
+        if not user or user.role != "player":
+            # Same message either way — don't leak accounts
+            return MessageOut(message="Se o cadastro existir, enviamos um novo código.")
+        if user.email_verified:
+            raise HTTPException(
+                status_code=400,
+                detail="Este e-mail já está confirmado. Use Entrar com sua senha.",
+            )
+        code = issue_code(db, email, "register", user.id)
+        send_code_email(db, email, "register", code)
+        return MessageOut(message="Enviamos um novo código para o seu e-mail.")
+    # reset
+    if user and user.active:
+        code = issue_code(db, email, "reset", user.id)
+        send_code_email(db, email, "reset", code)
+    return MessageOut(message="Se o e-mail existir, enviamos um novo código.")
 
 
 @router.post("/forgot-password", response_model=MessageOut)

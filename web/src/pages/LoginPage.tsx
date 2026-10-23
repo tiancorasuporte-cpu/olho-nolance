@@ -29,6 +29,25 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
     }
   }
 
+  async function resend(purpose: "register" | "reset") {
+    if (!email.trim()) {
+      setError("Informe o e-mail");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await api.resendCode({ email, purpose });
+      setInfo(res.message);
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao reenviar");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -192,15 +211,16 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
 
           {(mode === "confirm" || mode === "reset") && (
             <label className="login-field">
-              <span>Código de 6 dígitos</span>
+              <span>Código do e-mail (6 dígitos)</span>
               <input
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 inputMode="numeric"
                 pattern="\d{6}"
-                maxLength={6}
+                maxLength={7}
+                placeholder="000000"
                 required
-                autoFocus={mode === "reset"}
+                autoFocus={mode === "confirm" || mode === "reset"}
               />
             </label>
           )}
@@ -270,13 +290,18 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
             )}
             {mode === "confirm" && (
               <>
-                <button type="button" className="login-link" onClick={() => go("register")}>
-                  Reenviar cadastro
+                <button type="button" className="login-link" disabled={loading} onClick={() => void resend("register")}>
+                  Não recebi — reenviar código
                 </button>
                 <button type="button" className="login-link" onClick={() => go("login")}>
-                  Voltar ao login
+                  Já confirmei — entrar
                 </button>
               </>
+            )}
+            {mode === "reset" && (
+              <button type="button" className="login-link" disabled={loading} onClick={() => void resend("reset")}>
+                Reenviar código
+              </button>
             )}
             {(mode === "forgot" || mode === "reset") && (
               <button type="button" className="login-link" onClick={() => go("login")}>

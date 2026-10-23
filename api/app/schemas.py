@@ -44,6 +44,11 @@ class ConfirmEmailIn(BaseModel):
     code: str
 
 
+class ResendCodeIn(BaseModel):
+    email: str
+    purpose: Literal["register", "reset"] = "register"
+
+
 class ForgotPasswordIn(BaseModel):
     email: str
 

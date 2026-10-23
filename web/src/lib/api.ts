@@ -173,6 +173,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  resendCode: (body: { email: string; purpose?: "register" | "reset" }) =>
+    request<{ message: string }>("/auth/resend-code", {
+      method: "POST",
+      body: JSON.stringify({ email: body.email, purpose: body.purpose || "register" }),
+    }),
   forgotPassword: (email: string) =>
     request<{ message: string }>("/auth/forgot-password", {
       method: "POST",
