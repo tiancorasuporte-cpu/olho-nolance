@@ -145,36 +145,63 @@ def verify_code(db: Session, email: str, purpose: str, code: str) -> EmailCode:
     )
 
 
+def _code_email_bodies(purpose: str, code: str) -> tuple[str, str, str]:
+    """Return subject, plain text, html. HTML is tiny (no images) — no perf impact."""
+    if purpose == "register":
+        title = "Confirme seu e-mail"
+        lead = "Use este código para ativar sua conta de participante:"
+        subject = f"ONL Sports - codigo {code}"
+    elif purpose == "reset":
+        title = "Redefinir senha"
+        lead = "Use este código para criar uma nova senha:"
+        subject = f"ONL Sports - redefinir senha {code}"
+    else:
+        title = "Seu codigo"
+        lead = "Seu codigo ONL Sports:"
+        subject = f"ONL Sports - codigo {code}"
+
+    text = (
+        f"ONL Sports\n\n{title}\n\n{lead}\n\n"
+        f"  {code}\n\n"
+        f"Valido por {CODE_TTL_MIN} minutos.\n"
+        "Digite so os 6 numeros na tela (sem espacos).\n\n"
+        "Se voce nao pediu isso, ignore este e-mail.\n"
+    )
+    html = f"""\
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0;background:#111;font-family:Arial,Helvetica,sans-serif;color:#eee;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#111;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:440px;background:#1b1b1b;border:1px solid #333;border-radius:16px;padding:28px 24px;">
+        <tr><td align="center" style="font-size:22px;font-weight:700;color:#ff6b00;letter-spacing:0.04em;">ONL SPORTS</td></tr>
+        <tr><td align="center" style="padding-top:18px;font-size:18px;font-weight:700;color:#fff;">{title}</td></tr>
+        <tr><td align="center" style="padding-top:10px;font-size:14px;color:#aaa;line-height:1.45;">{lead}</td></tr>
+        <tr><td align="center" style="padding:22px 0 8px;">
+          <div style="display:inline-block;background:#111;border:1px solid #ff6b00;border-radius:12px;padding:14px 22px;
+                      font-size:32px;font-weight:700;letter-spacing:0.28em;color:#fff;font-family:Consolas,Menlo,monospace;">
+            {code}
+          </div>
+        </td></tr>
+        <tr><td align="center" style="font-size:13px;color:#888;padding-top:8px;">
+          Valido por {CODE_TTL_MIN} minutos · digite so os 6 numeros
+        </td></tr>
+        <tr><td align="center" style="font-size:12px;color:#666;padding-top:20px;">
+          Se voce nao pediu este e-mail, pode ignorar.
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>
+"""
+    return subject, text, html
+
+
 def send_code_email(db: Session, email: str, purpose: str, code: str) -> None:
     cfg = get_email_config(db)
-    pretty = f"{code[0:3]}-{code[3:6]}"
-    if purpose == "register":
-        subject = f"ONL Sports — seu código: {pretty}"
-        body = (
-            f"Olá!\n\n"
-            f"Seu código de confirmação é:\n\n"
-            f"    {pretty}\n\n"
-            f"(ou {code} sem o traço)\n\n"
-            f"Ele vale por {CODE_TTL_MIN} minutos.\n\n"
-            "Se você não pediu este cadastro, ignore este e-mail.\n\n"
-            "ONL Sports"
-        )
-    elif purpose == "reset":
-        subject = f"ONL Sports — redefinir senha: {pretty}"
-        body = (
-            f"Olá!\n\n"
-            f"Seu código para redefinir a senha é:\n\n"
-            f"    {pretty}\n\n"
-            f"(ou {code} sem o traço)\n\n"
-            f"Ele vale por {CODE_TTL_MIN} minutos.\n\n"
-            "Se você não pediu a troca, ignore este e-mail.\n\n"
-            "ONL Sports"
-        )
-    else:
-        subject = f"ONL Sports — código: {pretty}"
-        body = f"Seu código é: {pretty}\n\nONL Sports"
+    subject, text, html = _code_email_bodies(purpose, code)
     try:
-        send_email(cfg, email, subject, body)
+        send_email(cfg, email, subject, text, html)
     except Exception as exc:
         logger.exception("Falha ao enviar e-mail para %s", email)
         raise HTTPException(status_code=503, detail=f"Falha ao enviar e-mail: {exc}") from exc

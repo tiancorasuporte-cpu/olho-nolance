@@ -81,6 +81,8 @@ def get_email_config(db: Session) -> EmailConfig:
 def save_email_config(db: Session, cfg: EmailConfig, *, keep_password: bool = False) -> EmailConfig:
     current = get_email_config(db)
     password = current.password if keep_password and not cfg.password else cfg.password
+    # Port 465 is implicit SSL; 587 is usually STARTTLS.
+    use_ssl = True if cfg.smtp_port == 465 else (False if cfg.smtp_port == 587 else cfg.use_ssl)
     _set(db, KEYS["host"], cfg.host.strip())
     _set(db, KEYS["smtp_port"], str(cfg.smtp_port))
     _set(db, KEYS["imap_port"], str(cfg.imap_port))
@@ -88,7 +90,7 @@ def save_email_config(db: Session, cfg: EmailConfig, *, keep_password: bool = Fa
     _set(db, KEYS["password"], password)
     _set(db, KEYS["from_email"], (cfg.from_email or cfg.username).strip())
     _set(db, KEYS["from_name"], (cfg.from_name or "ONL Sports").strip())
-    _set(db, KEYS["use_ssl"], "1" if cfg.use_ssl else "0")
+    _set(db, KEYS["use_ssl"], "1" if use_ssl else "0")
     db.commit()
     return get_email_config(db)
 

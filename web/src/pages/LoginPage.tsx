@@ -210,19 +210,24 @@ export function LoginPage({ initialMode = "login" }: { initialMode?: Mode }) {
           )}
 
           {(mode === "confirm" || mode === "reset") && (
-            <label className="login-field">
-              <span>Código do e-mail (6 dígitos)</span>
-              <input
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={7}
-                placeholder="000000"
-                required
-                autoFocus={mode === "confirm" || mode === "reset"}
-              />
-            </label>
+            <>
+              <p className="login-info" style={{ margin: 0 }}>
+                Abra o e-mail mais recente da ONL Sports e digite só os 6 números do código.
+              </p>
+              <label className="login-field">
+                <span>Código do e-mail (6 dígitos)</span>
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={7}
+                  placeholder="000000"
+                  required
+                  autoFocus={mode === "confirm" || mode === "reset"}
+                />
+              </label>
+            </>
           )}
 
           {mode === "reset" && (

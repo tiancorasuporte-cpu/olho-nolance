@@ -238,7 +238,14 @@ export function SettingsPage() {
               type="number"
               required
               value={emailForm.smtp_port}
-              onChange={(e) => setEmailForm({ ...emailForm, smtp_port: Number(e.target.value) || 587 })}
+              onChange={(e) => {
+                const smtp_port = Number(e.target.value) || 587;
+                setEmailForm({
+                  ...emailForm,
+                  smtp_port,
+                  use_ssl: smtp_port === 465 ? true : smtp_port === 587 ? false : emailForm.use_ssl,
+                });
+              }}
               style={inputStyle}
             />
           </label>
