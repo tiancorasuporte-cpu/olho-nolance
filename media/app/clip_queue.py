@@ -25,7 +25,8 @@ settings = get_settings()
 # Instagram Stories / WhatsApp Status: 9:16
 OUT_W, OUT_H, OUT_FPS = 1080, 1920, 30
 TOP_BAR_H = 240
-BOTTOM_BAR_H = 360
+# Bottom sponsors: PNG overlays only (no solid/semi-transparent bar).
+BOTTOM_LOGO_H = 280
 ACCENT_LINE_H = 6
 BAR_PADDING = 16
 BAR_COLOR = "0x0a0a0a"
@@ -103,7 +104,7 @@ def render_vertical(
     clip_seconds: int,
     use_nvenc: bool,
 ) -> subprocess.CompletedProcess:
-    """1080x1920: [top banner] + video (center crop) + [sponsor bar] + watermark.
+    """1080x1920: optional top banner + video + floating PNG sponsors + watermark.
 
     Images are single-frame inputs (no -loop) held with eof_action=repeat — looping
     image inputs made ffmpeg hang.
@@ -113,8 +114,8 @@ def render_vertical(
     skip = max(available - duration, 0.0)
     W, H = OUT_W, OUT_H
     top_h = TOP_BAR_H if top_path else 0
-    bottom_h = BOTTOM_BAR_H if bottom_paths else 0
-    video_h = H - top_h - bottom_h
+    # Video fills everything below the top banner; bottom logos float on the play.
+    video_h = H - top_h
 
     inputs = ["-ss", f"{skip:.3f}", "-i", str(src)]
     base = (
@@ -122,8 +123,6 @@ def render_vertical(
         f"crop={W}:{video_h},setsar=1,"
         f"pad={W}:{H}:0:{top_h}:color={BAR_COLOR}"
     )
-    if bottom_h:
-        base += f",drawbox=x=0:y={H - bottom_h}:w={W}:h={ACCENT_LINE_H}:color={ACCENT_COLOR}:t=fill"
     if top_h:
         base += f",drawbox=x=0:y={top_h - ACCENT_LINE_H}:w={W}:h={ACCENT_LINE_H}:color={ACCENT_COLOR}:t=fill"
     chains = [base + "[base]"]
@@ -134,21 +133,25 @@ def render_vertical(
         inputs += ["-i", str(top_path)]
         box_h = top_h - ACCENT_LINE_H - 2 * BAR_PADDING
         chains.append(
-            f"[{idx}:v]scale={W - 2 * BAR_PADDING}:{box_h}:force_original_aspect_ratio=decrease[img{idx}]"
+            f"[{idx}:v]format=rgba,scale={W - 2 * BAR_PADDING}:{box_h}:"
+            f"force_original_aspect_ratio=decrease[img{idx}]"
         )
         overlays.append((idx, "(W-w)/2", f"({top_h - ACCENT_LINE_H}-h)/2"))
         idx += 1
     if bottom_paths:
-        slot_w = W // len(bottom_paths)
-        bar_y = H - bottom_h + ACCENT_LINE_H
-        box_h = bottom_h - ACCENT_LINE_H - 2 * BAR_PADDING
+        n_logos = len(bottom_paths)
+        slot_w = W // n_logos
+        box_h = BOTTOM_LOGO_H
+        logo_y = H - BAR_PADDING - box_h
         for i, path in enumerate(bottom_paths):
             inputs += ["-i", str(path)]
             chains.append(
-                f"[{idx}:v]scale={slot_w - 2 * BAR_PADDING}:{box_h}:"
+                f"[{idx}:v]format=rgba,scale={slot_w - 2 * BAR_PADDING}:{box_h}:"
                 f"force_original_aspect_ratio=decrease[img{idx}]"
             )
-            overlays.append((idx, f"{i * slot_w}+({slot_w}-w)/2", f"{bar_y}+({bottom_h - ACCENT_LINE_H}-h)/2"))
+            overlays.append(
+                (idx, f"{i * slot_w}+({slot_w}-w)/2", f"{logo_y}+({box_h}-h)/2")
+            )
             idx += 1
     if WATERMARK_PATH.is_file():
         inputs += ["-i", str(WATERMARK_PATH)]
@@ -161,7 +164,9 @@ def render_vertical(
     last = "base"
     for n, (img_idx, x, y) in enumerate(overlays):
         out = f"v{n}"
-        chains.append(f"[{last}][img{img_idx}]overlay=x={x}:y={y}:eof_action=repeat[{out}]")
+        chains.append(
+            f"[{last}][img{img_idx}]overlay=x={x}:y={y}:format=auto:eof_action=repeat[{out}]"
+        )
         last = out
     chains.append(f"[{last}]format=yuv420p[out]")
 
