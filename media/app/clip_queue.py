@@ -36,9 +36,12 @@ WATERMARK_W = 240
 WATERMARK_MARGIN = 24
 WATERMARK_OPACITY = 0.75
 
+# ultrafast + fewer threads: leave CPU for live HEVC→H.264 transcode
 CPU_ENCODE = [
-    "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "high", "-level", "4.1",
-    "-crf", "21", "-maxrate", "4M", "-bufsize", "8M",
+    "-c:v", "libx264", "-preset", "ultrafast", "-tune", "fastdecode",
+    "-profile:v", "baseline", "-level", "4.1",
+    "-threads", "2",
+    "-crf", "23", "-maxrate", "4M", "-bufsize", "8M",
 ]
 NVENC_ENCODE = [
     "-c:v", "h264_nvenc", "-preset", "p4", "-profile:v", "high", "-level", "4.1",
@@ -118,14 +121,18 @@ def render_vertical(
     video_h = H - top_h
 
     inputs = ["-ss", f"{skip:.3f}", "-i", str(src)]
+    # One yuv→rgba up front (not per overlay). format=auto on every overlay was
+    # re-converting the full 1080x1920 frame and made CPU renders crawl.
     base = (
-        f"[0:v]fps={OUT_FPS},scale={W}:{video_h}:force_original_aspect_ratio=increase,"
+        f"[0:v]fps={OUT_FPS},scale={W}:{video_h}:flags=fast_bilinear:"
+        f"force_original_aspect_ratio=increase,"
         f"crop={W}:{video_h},setsar=1,"
         f"pad={W}:{H}:0:{top_h}:color={BAR_COLOR}"
     )
     if top_h:
         base += f",drawbox=x=0:y={top_h - ACCENT_LINE_H}:w={W}:h={ACCENT_LINE_H}:color={ACCENT_COLOR}:t=fill"
-    chains = [base + "[base]"]
+    base += ",format=rgba[base]"
+    chains = [base]
 
     overlays: list[tuple[int, str, str]] = []
     idx = 1
@@ -133,8 +140,8 @@ def render_vertical(
         inputs += ["-i", str(top_path)]
         box_h = top_h - ACCENT_LINE_H - 2 * BAR_PADDING
         chains.append(
-            f"[{idx}:v]format=rgba,scale={W - 2 * BAR_PADDING}:{box_h}:"
-            f"force_original_aspect_ratio=decrease[img{idx}]"
+            f"[{idx}:v]scale={W - 2 * BAR_PADDING}:{box_h}:flags=fast_bilinear:"
+            f"force_original_aspect_ratio=decrease,format=rgba[img{idx}]"
         )
         overlays.append((idx, "(W-w)/2", f"({top_h - ACCENT_LINE_H}-h)/2"))
         idx += 1
@@ -146,8 +153,8 @@ def render_vertical(
         for i, path in enumerate(bottom_paths):
             inputs += ["-i", str(path)]
             chains.append(
-                f"[{idx}:v]format=rgba,scale={slot_w - 2 * BAR_PADDING}:{box_h}:"
-                f"force_original_aspect_ratio=decrease[img{idx}]"
+                f"[{idx}:v]scale={slot_w - 2 * BAR_PADDING}:{box_h}:flags=fast_bilinear:"
+                f"force_original_aspect_ratio=decrease,format=rgba[img{idx}]"
             )
             overlays.append(
                 (idx, f"{i * slot_w}+({slot_w}-w)/2", f"{logo_y}+({box_h}-h)/2")
@@ -156,7 +163,8 @@ def render_vertical(
     if WATERMARK_PATH.is_file():
         inputs += ["-i", str(WATERMARK_PATH)]
         chains.append(
-            f"[{idx}:v]scale={WATERMARK_W}:-1,format=rgba,colorchannelmixer=aa={WATERMARK_OPACITY}[img{idx}]"
+            f"[{idx}:v]scale={WATERMARK_W}:-1:flags=fast_bilinear,format=rgba,"
+            f"colorchannelmixer=aa={WATERMARK_OPACITY}[img{idx}]"
         )
         overlays.append((idx, str(WATERMARK_MARGIN), str(top_h + WATERMARK_MARGIN)))
         idx += 1
@@ -165,7 +173,7 @@ def render_vertical(
     for n, (img_idx, x, y) in enumerate(overlays):
         out = f"v{n}"
         chains.append(
-            f"[{last}][img{img_idx}]overlay=x={x}:y={y}:format=auto:eof_action=repeat[{out}]"
+            f"[{last}][img{img_idx}]overlay=x={x}:y={y}:eof_action=repeat[{out}]"
         )
         last = out
     chains.append(f"[{last}]format=yuv420p[out]")
@@ -193,7 +201,8 @@ class RenderQueue:
     def _pool(self) -> ThreadPoolExecutor:
         with self._lock:
             if self._executor is None:
-                workers = settings.clip_render_workers or (3 if nvenc_available() else 2)
+                # On CPU, 1 worker finishes a clip faster than fighting the live transcode.
+                workers = settings.clip_render_workers or (3 if nvenc_available() else 1)
                 self._executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="render")
                 logger.info("Render queue: %s workers, encoder=%s", workers, encoder_name())
             return self._executor
@@ -231,6 +240,7 @@ class RenderQueue:
         raw_path = out_dir / f"{clip_id}.raw.mp4"
         out_path = out_dir / f"{clip_id}.mp4"
         status, error = "ready", None
+        t0 = time.monotonic()
         try:
             if not raw_path.is_file():
                 status, error = "failed", "Arquivo bruto do lance não encontrado"
@@ -247,6 +257,11 @@ class RenderQueue:
         except Exception as exc:
             status, error = "failed", str(exc)
         finally:
+            elapsed = time.monotonic() - t0
+            logger.info(
+                "Render clip=%s status=%s encoder=%s elapsed=%.1fs",
+                clip_id, status, encoder_name(), elapsed,
+            )
             raw_path.unlink(missing_ok=True)
             self.job_path(venue_id, clip_id).unlink(missing_ok=True)
             with self._lock:
